@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cesar Palace Truck Parking</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#14171a; --panel:#1c2024; --panel-2:#22262b; --line:#2a2f34;
+    --text:#eae7e1; --text-dim:#8b9298; --text-faint:#5a6067;
+    --amber:#f5a623; --amber-dim:#b97e1a;
+    --green:#35c47a; --green-dim:rgba(53,196,122,0.14);
+    --yellow:#e6b800; --red:#e8483c; --red-dim:rgba(232,72,60,0.14);
+    --blue:#4aa3e0; --blue-dim:rgba(74,163,224,0.15);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:16px;}
+  .wrap{max-width:1500px;margin:0 auto;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+  .brand-row{display:flex;align-items:center;gap:14px;}
+  .brand-logo{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:4px;}
+  h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;}
+  .clock{font-family:var(--mono);font-size:12px;color:var(--text-dim);margin-top:4px;}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);font-family:var(--mono);}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
+  .dot.off{background:var(--red);box-shadow:0 0 6px var(--red);}
+
+  .banner{background:var(--panel);border:1px solid var(--amber-dim);color:var(--amber);padding:10px 14px;border-radius:8px;font-size:12px;font-family:var(--mono);margin-bottom:14px;display:none;}
+
+  .alert-bar{display:none;background:#2a1414;border:1px solid var(--red);border-radius:10px;padding:10px 14px;margin-bottom:14px;}
+  .alert-bar.show{display:block;}
+  .alert-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:8px;}
+  .alert-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid #3a1c1c;flex-wrap:wrap;font-family:var(--mono);font-size:12px;}
+  .alert-row:first-of-type{border-top:none;}
+  .alert-actions{display:flex;gap:6px;}
+  .mini-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:var(--sans);font-weight:600;}
+  .mini-btn:hover{border-color:var(--amber-dim);}
+  .mini-btn.danger{background:var(--red);color:#1a0a08;border-color:var(--red);}
+
+  .lock-screen{position:fixed;inset:0;background:#0c0e10;z-index:200;display:none;align-items:center;justify-content:center;padding:24px;}
+  .lock-screen.show{display:flex;}
+  .lock-card{max-width:420px;text-align:center;}
+  .lock-card .lock-logo{width:56px;height:56px;border-radius:10px;margin-bottom:18px;object-fit:cover;}
+  .lock-card h2{font-size:20px;margin:0 0 10px 0;color:var(--text);}
+  .lock-card p{color:var(--text-dim);font-size:14px;line-height:1.6;margin-bottom:20px;}
+  .lock-card button{background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);border-radius:8px;padding:9px 16px;font-size:12px;font-family:var(--sans);cursor:pointer;}
+  .lock-screen.show ~ .wrap{display:none;}
+
+  .admin-link{font-size:10px;color:var(--text-faint);text-decoration:underline;cursor:pointer;margin-left:8px;}
+
+  .board{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:14px;}
+  .board > div{background:var(--panel);padding:12px 14px;}
+  .gauge-cell{display:flex;flex-direction:column;justify-content:center;gap:8px;}
+  .gauge-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);display:flex;justify-content:space-between;}
+  .gauge-pct{font-family:var(--mono);color:var(--amber);font-weight:700;}
+  .gauge-track{display:flex;gap:2px;height:16px;}
+  .seg{flex:1;background:var(--panel-2);border-radius:2px;}
+  .seg.on{background:var(--seg-color, var(--green));}
+  .stat-cell{display:flex;flex-direction:column;justify-content:center;}
+  .stat-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
+  .stat-num{font-family:var(--mono);font-size:23px;font-weight:700;line-height:1.1;margin-top:4px;}
+  .stat-num.free{color:var(--green);}
+  .stat-num.occ{color:var(--red);}
+  .stat-num.resv{color:var(--blue);}
+  .stat-num.total{color:var(--text);}
+  .resv-edit{font-size:10px;color:var(--text-faint);text-decoration:underline;cursor:pointer;margin-top:2px;font-family:var(--sans);}
+
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  .btn-sm{background:var(--panel);border:1px solid var(--line);color:var(--text-dim);border-radius:7px;padding:9px 13px;font-size:12px;font-family:var(--sans);font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .btn-sm:hover{border-color:var(--amber-dim);color:var(--text);}
+
+  .legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-family:var(--mono);font-size:11px;color:var(--text-dim);}
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .legend-dot{width:10px;height:10px;border-radius:3px;border:1px solid rgba(255,255,255,.25);}
+
+  .release-bar{display:none;background:var(--panel);border:1px solid var(--red);border-radius:8px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--text);}
+  .release-bar.show{display:flex;}
+
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+  .search{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:13px;}
+  .search::placeholder{color:var(--text-faint);}
+  .search:focus{outline:none;border-color:var(--amber-dim);}
+  .zones{display:flex;gap:6px;flex-wrap:wrap;}
+  .zone-btn{background:var(--panel);border:1px solid var(--line);color:var(--text-dim);border-radius:7px;padding:9px 12px;font-size:12px;font-family:var(--mono);cursor:pointer;}
+  .zone-btn:hover{border-color:var(--amber-dim);color:var(--text);}
+  .zone-btn.active{background:var(--amber);color:#1a1400;border-color:var(--amber);font-weight:700;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:22px;}
+  .spot{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px;cursor:pointer;transition:transform .1s, border-color .15s;position:relative;min-height:80px;}
+  .spot:hover{transform:translateY(-2px);border-color:var(--amber-dim);}
+  .spot.free{border-left:3px solid var(--green);}
+  .spot.occ{border-left:3px solid var(--red);background:linear-gradient(180deg, var(--red-dim), var(--panel) 60%);}
+  .spot.frigo{border-left:3px solid var(--blue);background:linear-gradient(180deg, var(--blue-dim), var(--panel) 60%);}
+  .spot.overdue{animation:pulseRed 1.4s infinite;}
+  @keyframes pulseRed{0%,100%{box-shadow:0 0 0 0 rgba(232,72,60,.6);}50%{box-shadow:0 0 0 4px rgba(232,72,60,0);}}
+  .spot.selectable{outline:2px dashed var(--red);outline-offset:-2px;}
+  .spot.selected{background:#3a1414;}
+  .cat-dot{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:2px;border:1px solid rgba(255,255,255,.3);}
+  .spot-id{font-family:var(--mono);font-weight:700;font-size:14px;}
+  .spot-tag{font-size:9px;color:var(--text-faint);letter-spacing:.08em;text-transform:uppercase;}
+  .spot-plate{font-family:var(--mono);font-size:11px;color:var(--amber);margin-top:7px;font-weight:700;word-break:break-all;}
+  .spot-dur{font-family:var(--mono);font-size:10px;margin-top:2px;}
+  .spot-dur.g{color:var(--green);} .spot-dur.y{color:var(--yellow);} .spot-dur.r{color:var(--red);font-weight:700;} .spot-dur.n{color:var(--text-dim);}
+  .spot-free-label{font-size:10px;color:var(--text-faint);margin-top:8px;letter-spacing:.08em;text-transform:uppercase;}
+  .empty-msg{color:var(--text-faint);font-size:13px;padding:30px 0;text-align:center;grid-column:1/-1;}
+  .frigo-icon{font-size:10px;}
+
+  .journal{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .journal h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);margin:0 0 10px 0;}
+  .journal-list{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+  .journal-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--line);padding-bottom:6px;gap:8px;}
+  .journal-row .act-in{color:var(--green);} .journal-row .act-out{color:var(--red);} .journal-row .act-adj{color:var(--amber);}
+  .journal-empty{color:var(--text-faint);font-size:12px;}
+  .footnote{font-size:11px;color:var(--text-faint);margin-top:8px;font-family:var(--mono);}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;overflow-y:auto;}
+  .overlay.hidden{display:none;}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;width:100%;max-width:420px;margin:auto;}
+  .modal.wide{max-width:640px;}
+  .modal h3{margin:0 0 4px 0;font-size:18px;font-family:var(--mono);}
+  .modal .sub{color:var(--text-dim);font-size:12px;margin-bottom:16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
+  .field input, .field select{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:10px 10px;color:var(--text);font-family:var(--mono);font-size:14px;}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--amber-dim);}
+  .field.checkbox{display:flex;align-items:center;gap:8px;}
+  .field.checkbox input{width:auto;}
+  .field.checkbox label{margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;}
+  .btn{flex:1;padding:11px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;}
+  .btn.primary{background:var(--amber);color:#1a1400;border-color:var(--amber);}
+  .btn.danger{background:var(--red);color:#1a0a08;border-color:var(--red);}
+  .btn:hover{filter:brightness(1.08);}
+  .modal-info{font-family:var(--mono);font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:6px;}
+  .modal-info b{color:var(--text);}
+  .err{color:var(--red);font-size:12px;margin-top:-8px;margin-bottom:10px;display:none;}
+
+  .tariff-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .tariff-row{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .tariff-row input{background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:13px;width:100%;}
+  .tariff-row input:focus{outline:none;}
+  .tariff-row .unit{color:var(--text-faint);font-size:11px;white-space:nowrap;}
+  .tariff-row .del{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px;}
+
+  .cat-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .cat-row{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .cat-row input[type=text]{flex:1;background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:13px;}
+  .cat-row input[type=text]:focus{outline:none;}
+  .cat-row input[type=color]{width:30px;height:30px;border:none;background:none;padding:0;cursor:pointer;}
+  .cat-row .del{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px;}
+
+  .slot-list{max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .slot-row{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;}
+  .slot-row input[type=text]{flex:1;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:13px;}
+  .slot-row input[type=text]:focus{outline:none;}
+  .slot-row .occ-tag{font-size:10px;color:var(--red);font-family:var(--sans);white-space:nowrap;}
+  .slot-row .del{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px;}
+
+  .journal-full{max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+  .journal-full-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:12px;color:var(--text-dim);}
+  .journal-full-row .del{background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;padding:2px 6px;flex-shrink:0;}
+  .journal-full-row .del:hover{color:#ff6b5e;}
+  .journal-filter{display:flex;gap:8px;margin-bottom:10px;}
+  .journal-filter input{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:13px;}
+
+  .period-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .period-tab{background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);border-radius:7px;padding:8px 12px;font-size:12px;font-family:var(--sans);font-weight:600;cursor:pointer;}
+  .period-tab.active{background:var(--amber);color:#1a1400;border-color:var(--amber);}
+  .ca-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;margin-bottom:12px;}
+  .ca-table th,.ca-table td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);}
+  .ca-table th{color:var(--text-dim);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.08em;}
+  .ca-table tr.total-row td{font-weight:700;color:var(--amber);border-top:2px solid var(--line);}
+  .ca-summary{display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap;}
+  .ca-summary-item .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);}
+  .ca-summary-item .val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--amber);}
+
+  @media (max-width:820px){
+    .board{grid-template-columns:1fr 1fr;}
+    .board > div:first-child{grid-column:1/-1;}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));}
+    .btn-sm{flex:1;text-align:center;}
+    h1{font-size:19px;}
+    .modal{padding:18px;}
+    .field input,.field select{padding:12px 10px;font-size:16px;}
+    .btn{padding:13px 12px;font-size:14px;}
+  }
+</style>
+</head>
+<body>
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-card">
+    <img class="lock-logo" src="" id="lockLogo" alt="">
+    <h2 id="lockTitle">Accès suspendu</h2>
+    <p id="lockMsg">L'accès à cet outil est momentanément suspendu. Merci de contacter le prestataire pour le réactiver.</p>
+    <button id="lockAdminBtn">Administration</button>
+  </div>
+</div>
+<div class="wrap">
+
+  <header>
+    <div class="brand-row">
+      <img class="brand-logo" src="data:image/jpeg;base64,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" alt="Cesar Palace">
+      <div>
+        <div class="eyebrow">Suivi occupation temps réel · synchronisé</div>
+        <h1>Cesar Palace Truck Parking</h1>
+        <div class="clock" id="clock">--:--:--</div>
+      </div>
+    </div>
+    <div class="status-pill"><span class="dot" id="syncDot"></span><span id="syncLabel">synchronisé</span></div>
+  </header>
+
+  <div class="banner" id="errBanner"></div>
+
+  <div class="alert-bar" id="alertBar">
+    <div class="alert-title">⚠ Places en dépassement</div>
+    <div id="alertList"></div>
+  </div>
+
+  <div class="board">
+    <div class="gauge-cell">
+      <div class="gauge-label"><span>Taux d'occupation</span><span class="gauge-pct" id="gaugePct">0%</span></div>
+      <div class="gauge-track" id="gaugeTrack"></div>
+    </div>
+    <div class="stat-cell"><div class="stat-label">Libres</div><div class="stat-num free" id="statFree">0</div></div>
+    <div class="stat-cell"><div class="stat-label">Occupées</div><div class="stat-num occ" id="statOcc">0</div></div>
+    <div class="stat-cell">
+      <div class="stat-label">Réservations Travis</div>
+      <div class="stat-num resv" id="statResv">0/0</div>
+      <div class="resv-edit" id="editResvBtn">modifier le total du jour</div>
+    </div>
+    <div class="stat-cell"><div class="stat-label">Total</div><div class="stat-num total" id="statTotal">250</div></div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn-sm" id="releaseModeBtn">🚫 Libérer par sélection</button>
+    <button class="btn-sm" id="releaseByNumberBtn">🔢 Libérer par numéro</button>
+    <button class="btn-sm" id="catBtn">🎨 Catégories</button>
+    <button class="btn-sm" id="slotsBtn">🧩 Gérer les emplacements</button>
+    <button class="btn-sm" id="tariffBtn">💶 Tarif</button>
+    <button class="btn-sm" id="caBtn">📈 Synthèse CA</button>
+    <button class="btn-sm" id="journalBtn">📋 Journal complet</button>
+    <button class="btn-sm" id="exportCsvBtn">📊 Export CSV</button>
+    <button class="btn-sm" id="exportPdfBtn">🖨️ Export PDF</button>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="release-bar" id="releaseBar">
+    <strong>Mode libération</strong>
+    <span id="releaseCount">0 place sélectionnée</span>
+    <button class="btn-sm" id="confirmReleaseBtn">✅ Valider</button>
+    <button class="btn-sm" id="cancelReleaseBtn">❌ Annuler</button>
+  </div>
+
+  <div class="controls">
+    <input class="search" id="searchInput" placeholder="Rechercher une plaque d'immatriculation…">
+    <div class="zones" id="zoneButtons"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="journal">
+    <h2>Journal des mouvements</h2>
+    <div class="journal-list" id="journalList"><div class="journal-empty">Aucun mouvement enregistré.</div></div>
+  </div>
+
+  <div class="footnote">Zone frigo = emplacements 1 à 22. L'état se met à jour au clic (entrée / sortie) — aucune remise à zéro manuelle n'est nécessaire. Astuce mobile : ajoutez cette page à votre écran d'accueil pour un accès rapide façon application.<span class="admin-link" id="footerAdminBtn">Administration</span></div>
+</div>
+
+<div class="overlay hidden" id="overlay"><div class="modal" id="modalBody"></div></div>
+
+<script>
+/* ---------- liste des emplacements (modifiable, stockée et partagée) ---------- */
+function defaultSlotsList(){
+  const list = [];
+  for (let i = 1; i <= 127; i++) list.push(String(i));
+  list.push('127Bis');
+  for (let i = 128; i <= 133; i++) list.push(String(i));
+  list.push('133/2','133/3','133/4','133/5','133/6');
+  for (let i = 134; i <= 244; i++) list.push(String(i));
+  return list;
+}
+let orderedSlots = defaultSlotsList();
+const SLOTS_KEY = "parking-slots-v1";
+
+const STATE_KEY = "state";
+const HISTORY_KEY = "history";
+const CATEGORIES_KEY = "categories";
+const RESERVATIONS_KEY = "reservations";
+const TARIFF_KEY = "tariff";
+const POLL_MS = 4000;
+
+const DEFAULT_CATEGORIES = [
+  { id:"travis", label:"Travis", color:"#4aa3e0" },
+  { id:"snap", label:"Snap account", color:"#f2f2ea" },
+  { id:"trucksnb", label:"Trucks NB", color:"#2dd4bf" },
+  { id:"cartecarburant", label:"Carte carburant", color:"#ff8c42" },
+  { id:"cb", label:"CB", color:"#9b7ede" },
+  { id:"especes", label:"Espèces", color:"#7fd858" },
+  { id:"interne", label:"Interne", color:"#f5c518" }
+];
+
+let spots = {};
+let history = [];
+let categories = [];
+let reservations = {};
+let tariffTiers = [];
+
+let currentZone = "ALL";
+let searchQuery = "";
+let modalOpen = false;
+let releaseMode = false;
+let releaseSelection = new Set();
+let lastStateJSON = "", lastHistJSON = "", lastCatJSON = "", lastResvJSON = "", lastTariffJSON = "", lastSlotsJSON = "";
+const DEFAULT_TARIFFS = [
+  { id:"t1", hours:1, price:5 },
+  { id:"t2", hours:72, price:90 }
+];
+
+function isFrigoZone(id){ const n = parseInt(id, 10); return String(n) === id && n >= 1 && n <= 22; }
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+
+function defaultState(){
+  const obj = {};
+  orderedSlots.forEach(id=>{ obj[id] = { id, status:"free", plate:null, category:null, frigo:false, entryTime:null, plannedDuration:null }; });
+  return obj;
+}
+
+function setSync(ok, label){
+  document.getElementById("syncDot").classList.toggle("off", !ok);
+  document.getElementById("syncLabel").textContent = label;
+}
+function showError(msg){
+  const b = document.getElementById("errBanner");
+  if(!msg){ b.style.display="none"; return; }
+  b.textContent = msg; b.style.display = "block";
+}
+
+/* ---------- storage helpers ---------- */
+async function loadKey(type, fallback){
+  try{
+    const res = await fetch(`/api/data?type=${type}`);
+    if(res.status === 403){ license = {...license, blocked:true}; applyLockState(); return fallback; }
+    if(!res.ok) return fallback;
+    const data = await res.json();
+    return (data.value === null || data.value === undefined) ? fallback : data.value;
+  }catch(e){ return fallback; }
+}
+async function saveKey(type, value, label){
+  try{
+    const res = await fetch(`/api/data?type=${type}`, {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({value})
+    });
+    if(res.status === 403){ license = {...license, blocked:true}; applyLockState(); return; }
+    if(!res.ok) throw new Error("échec");
+    setSync(true, "synchronisé"); showError(null);
+  }catch(e){
+    setSync(false, "erreur de synchro");
+    showError("Impossible d'enregistrer sur le serveur (" + label + "). Réessayez.");
+  }
+}
+async function saveState(newSpots){ spots = newSpots; await saveKey(STATE_KEY, newSpots, "état des places"); }
+async function saveCategories(newCats){ categories = newCats; await saveKey(CATEGORIES_KEY, newCats, "catégories"); }
+async function saveReservations(newResv){ reservations = newResv; await saveKey(RESERVATIONS_KEY, newResv, "réservations"); }
+async function saveTariffTiers(newTiers){ tariffTiers = newTiers; await saveKey(TARIFF_KEY, newTiers, "tarifs"); }
+async function pushHistory(entry){
+  history.unshift(entry); history = history.slice(0,300);
+  await saveKey(HISTORY_KEY, history, "historique");
+}
+
+function getCategory(id){ return categories.find(c=>c.id===id) || null; }
+
+/* ---------- formattage ---------- */
+function formatElapsed(entryTimeISO){
+  const ms = Date.now() - new Date(entryTimeISO).getTime();
+  const totalMin = Math.max(0, Math.floor(ms/60000));
+  const h = Math.floor(totalMin/60), m = totalMin % 60;
+  return h>0 ? h + "h" + String(m).padStart(2,"0") : m + " min";
+}
+function formatTimeShort(iso){ return new Date(iso).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}); }
+function formatDateTimeShort(iso){ return new Date(iso).toLocaleString("fr-FR"); }
+
+function isOverdue(s){
+  return s.status==="occupied" && s.plannedDuration && s.plannedDuration>0 &&
+    (Date.now() - new Date(s.entryTime).getTime())/3600000 > s.plannedDuration;
+}
+
+function durationInfo(spot){
+  const elapsedMs = Date.now() - new Date(spot.entryTime).getTime();
+  const elapsedH = elapsedMs / 3600000;
+  if(spot.plannedDuration && spot.plannedDuration > 0){
+    const remainH = spot.plannedDuration - elapsedH;
+    let cls = "g";
+    if(remainH <= 0) cls = "r"; else if(remainH < 1) cls = "r"; else if(remainH <= spot.plannedDuration/2) cls = "y";
+    let label;
+    if(remainH <= 0){
+      const overH = Math.floor(Math.abs(remainH)), overM = Math.floor((Math.abs(remainH)*60)%60);
+      label = `-${overH}h${String(overM).padStart(2,"0")}`;
+    }else{
+      const h = Math.floor(remainH), m = Math.floor((remainH*60)%60);
+      label = `${h}h${String(m).padStart(2,"0")} rest.`;
+    }
+    return { cls, label };
+  }
+  return { cls:"n", label: formatElapsed(spot.entryTime) };
+}
+
+function escapeHTML(str){
+  return String(str).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+/* ---------- licence / accès (vérifié côté serveur, code jamais exposé) ---------- */
+let license = { blocked:false, locked:false, paidUntil:null };
+let lastLicenseJSON = "";
+
+async function fetchLicenseStatus(){
+  try{
+    const res = await fetch("/api/license");
+    if(!res.ok) return null;
+    return await res.json(); // { blocked, locked, paidUntil }
+  }catch(e){ return null; }
+}
+
+function applyLockState(){
+  const blocked = !!license.blocked;
+  const screen = document.getElementById("lockScreen");
+  screen.classList.toggle("show", blocked);
+  const logo = document.querySelector(".brand-logo");
+  const lockLogo = document.getElementById("lockLogo");
+  if(logo && lockLogo){ lockLogo.src = logo.src; }
+  const msg = document.getElementById("lockMsg");
+  if(blocked && license.paidUntil && !license.locked){
+    msg.textContent = `L'accès à cet outil a expiré (payé jusqu'au ${new Date(license.paidUntil).toLocaleDateString("fr-FR")}). Merci de contacter le prestataire pour le réactiver.`;
+  }else{
+    msg.textContent = "L'accès à cet outil est momentanément suspendu. Merci de contacter le prestataire pour le réactiver.";
+  }
+}
+
+document.getElementById("lockAdminBtn").onclick = () => openAdminModal();
+document.getElementById("footerAdminBtn").onclick = () => openAdminModal();
+
+function openAdminModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal";
+  renderAdminModal();
+  overlay.classList.remove("hidden");
+}
+
+function renderAdminModal(errorMsg){
+  const body = document.getElementById("modalBody");
+  body.innerHTML = `
+    <h3>Administration de l'accès</h3>
+    <div class="sub">Statut actuel : ${license.blocked ? "🔒 bloqué" : "🔓 actif"}</div>
+    <div class="field"><label>Code administrateur</label><input id="adminCodeInput" type="password" placeholder="Requis pour enregistrer"></div>
+    ${errorMsg ? `<div class="err" style="display:block;">${errorMsg}</div>` : ""}
+    <div class="field"><label>Accès payé jusqu'au</label><input id="paidUntilInput" type="date" value="${license.paidUntil||''}"></div>
+    <div class="field checkbox"><input type="checkbox" id="lockedInput" ${license.locked?'checked':''}><label for="lockedInput">Bloquer l'accès manuellement (prioritaire sur la date)</label></div>
+    <div class="field"><label>Changer le code administrateur</label><input id="newCodeInput" type="text" placeholder="Laisser vide pour ne pas changer"></div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelAdminBtn">Fermer</button>
+      <button class="btn primary" id="saveAdminBtn">Enregistrer</button>
+    </div>
+  `;
+  document.getElementById("cancelAdminBtn").onclick = closeModal;
+  document.getElementById("saveAdminBtn").onclick = async () => {
+    const code = document.getElementById("adminCodeInput").value;
+    const paidUntil = document.getElementById("paidUntilInput").value || null;
+    const locked = document.getElementById("lockedInput").checked;
+    const newCode = document.getElementById("newCodeInput").value.trim();
+    try{
+      const res = await fetch("/api/license", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ code, locked, paidUntil, newCode: newCode || undefined })
+      });
+      if(res.status === 401){ renderAdminModal("Code incorrect."); return; }
+      if(!res.ok){ renderAdminModal("Erreur serveur, réessayez."); return; }
+      const status = await res.json();
+      const wasBlocked = license.blocked;
+      license = status;
+      lastLicenseJSON = JSON.stringify(status);
+      closeModal();
+      applyLockState();
+      if(wasBlocked && !license.blocked){ await loadAllData(); }
+    }catch(e){
+      renderAdminModal("Connexion au serveur impossible.");
+    }
+  };
+}
+
+
+/* ---------- rendu ---------- */
+function renderZoneButtons(){
+  const wrap = document.getElementById("zoneButtons");
+  wrap.innerHTML = "";
+  const defs = [["ALL","Toutes"],["FRIGO","Zone frigo (1-22)"],["STD","Zone standard"]];
+  defs.forEach(([key,label])=>{
+    const btn = document.createElement("button");
+    btn.className = "zone-btn" + (currentZone===key ? " active":"");
+    btn.textContent = label;
+    btn.onclick = () => { currentZone=key; renderZoneButtons(); renderGrid(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function renderLegend(){
+  const wrap = document.getElementById("legend");
+  wrap.innerHTML = "";
+  categories.forEach(c=>{
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-dot" style="background:${c.color}"></span><span>${escapeHTML(c.label)}</span>`;
+    wrap.appendChild(item);
+  });
+}
+
+function renderStats(){
+  const list = orderedSlots.map(id=>spots[id]).filter(Boolean);
+  const occ = list.filter(s=>s.status==="occupied").length;
+  const free = list.length - occ;
+  document.getElementById("statFree").textContent = free;
+  document.getElementById("statOcc").textContent = occ;
+  document.getElementById("statTotal").textContent = orderedSlots.length;
+  const pct = list.length ? Math.round((occ/list.length)*100) : 0;
+  document.getElementById("gaugePct").textContent = pct + "%";
+
+  const r = reservations[todayKey()] || {total:0, consumed:0};
+  const remaining = r.total - r.consumed;
+  document.getElementById("statResv").textContent = `${remaining}/${r.total}`;
+  document.getElementById("statResv").style.color = remaining < 0 ? "var(--red)" : "var(--blue)";
+
+  const track = document.getElementById("gaugeTrack");
+  track.innerHTML = "";
+  const segCount = 46;
+  const filled = Math.round((pct/100)*segCount);
+  let color = "var(--green)";
+  if(pct >= 90) color = "var(--red)"; else if(pct >= 70) color = "var(--amber)";
+  for(let i=0;i<segCount;i++){
+    const seg = document.createElement("div");
+    seg.className = "seg" + (i<filled ? " on":"");
+    if(i<filled) seg.style.setProperty("--seg-color", color);
+    track.appendChild(seg);
+  }
+}
+
+function renderAlertBar(){
+  const overdueIds = orderedSlots.filter(id => spots[id] && isOverdue(spots[id]));
+  const bar = document.getElementById("alertBar");
+  bar.classList.toggle("show", overdueIds.length>0);
+  const list = document.getElementById("alertList");
+  list.innerHTML = "";
+  overdueIds.forEach(id=>{
+    const s = spots[id];
+    const di = durationInfo(s);
+    const row = document.createElement("div");
+    row.className = "alert-row";
+    row.innerHTML = `<span>Place <b>${id}</b> — ${escapeHTML(s.plate||"")} — dépassée de ${di.label.replace('-','')}</span>`;
+    const actions = document.createElement("div");
+    actions.className = "alert-actions";
+    const plusBtn = document.createElement("button");
+    plusBtn.className = "mini-btn"; plusBtn.textContent = "+1h";
+    plusBtn.onclick = () => quickExtend(id);
+    const freeBtn = document.createElement("button");
+    freeBtn.className = "mini-btn danger"; freeBtn.textContent = "Libérer";
+    freeBtn.onclick = () => confirmRelease(id);
+    actions.appendChild(plusBtn); actions.appendChild(freeBtn);
+    row.appendChild(actions);
+    list.appendChild(row);
+  });
+}
+
+function renderGrid(){
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  const q = searchQuery.trim().toUpperCase();
+  const filtered = orderedSlots.filter(id=>{
+    const s = spots[id];
+    if(!s) return false;
+    if(currentZone==="FRIGO" && !isFrigoZone(id)) return false;
+    if(currentZone==="STD" && isFrigoZone(id)) return false;
+    if(q && !(s.plate && s.plate.toUpperCase().includes(q))) return false;
+    return true;
+  });
+  if(filtered.length===0){ grid.innerHTML = '<div class="empty-msg">Aucune place ne correspond.</div>'; return; }
+
+  filtered.forEach(id=>{
+    const s = spots[id];
+    const el = document.createElement("div");
+    let cls = "spot " + (s.status==="occupied" ? "occ":"free");
+    if(s.status==="occupied" && s.frigo) cls += " frigo";
+    if(s.status==="occupied" && isOverdue(s)) cls += " overdue";
+    if(releaseMode && s.status==="occupied") cls += " selectable";
+    if(releaseSelection.has(id)) cls += " selected";
+    el.className = cls;
+    el.onclick = () => releaseMode ? toggleReleaseSelect(id) : openModal(id);
+
+    const cat = s.category ? getCategory(s.category) : null;
+    const catDot = (s.status==="occupied" && cat) ? `<span class="cat-dot" style="background:${cat.color}" title="${escapeHTML(cat.label)}"></span>` : "";
+
+    if(s.status==="occupied"){
+      const di = durationInfo(s);
+      el.innerHTML = `
+        ${catDot}
+        <div class="spot-id">${id}</div>
+        <div class="spot-tag">${isFrigoZone(id) ? "Zone frigo" : "Standard"}${s.frigo ? ' <span class="frigo-icon">🧊</span>' : ''}</div>
+        <div class="spot-plate">${escapeHTML(s.plate)}</div>
+        <div class="spot-dur ${di.cls}">${di.label}</div>
+      `;
+    }else{
+      el.innerHTML = `
+        <div class="spot-id">${id}</div>
+        <div class="spot-tag">${isFrigoZone(id) ? "Zone frigo" : "Standard"}</div>
+        <div class="spot-free-label">Libre</div>
+      `;
+    }
+    grid.appendChild(el);
+  });
+}
+
+function renderJournal(){
+  const list = document.getElementById("journalList");
+  if(history.length===0){ list.innerHTML = '<div class="journal-empty">Aucun mouvement enregistré.</div>'; return; }
+  list.innerHTML = "";
+  history.slice(0,60).forEach(h=>{
+    const row = document.createElement("div");
+    row.className = "journal-row";
+    let actClass = "act-adj", label = h.action;
+    if(h.action === "entrée") actClass = "act-in";
+    else if(h.action === "sortie") actClass = "act-out";
+    row.innerHTML = `<span>${formatTimeShort(h.time)} — place ${h.spotId} <span class="${actClass}">${label}</span>${h.frigo ? ' 🧊':''}</span><span>${escapeHTML(h.plate||"")}</span>`;
+    list.appendChild(row);
+  });
+}
+
+function renderAll(){ renderStats(); renderGrid(); renderJournal(); renderReleaseBar(); renderLegend(); renderAlertBar(); }
+
+/* ---------- mode libération ---------- */
+function renderReleaseBar(){
+  const bar = document.getElementById("releaseBar");
+  bar.classList.toggle("show", releaseMode);
+  document.getElementById("releaseCount").textContent = `${releaseSelection.size} place${releaseSelection.size>1?'s':''} sélectionnée${releaseSelection.size>1?'s':''}`;
+}
+function toggleReleaseSelect(id){
+  const s = spots[id];
+  if(!s || s.status!=="occupied") return;
+  if(releaseSelection.has(id)) releaseSelection.delete(id); else releaseSelection.add(id);
+  renderReleaseBar(); renderGrid();
+}
+document.getElementById("releaseModeBtn").onclick = () => { releaseMode = true; releaseSelection.clear(); renderReleaseBar(); renderGrid(); };
+document.getElementById("cancelReleaseBtn").onclick = () => { releaseMode = false; releaseSelection.clear(); renderReleaseBar(); renderGrid(); };
+document.getElementById("confirmReleaseBtn").onclick = async () => {
+  if(releaseSelection.size===0) return;
+  const updated = {...spots}; const toLog = [];
+  releaseSelection.forEach(id=>{
+    const s = updated[id];
+    toLog.push({spotId:id, plate:s.plate, frigo:s.frigo, action:"sortie", time:new Date().toISOString()});
+    updated[id] = { id, status:"free", plate:null, category:null, frigo:false, entryTime:null, plannedDuration:null };
+  });
+  releaseMode = false; releaseSelection.clear();
+  await saveState(updated);
+  for(const entry of toLog){ await pushHistory(entry); }
+  renderAll();
+};
+document.getElementById("releaseByNumberBtn").onclick = async () => {
+  const saisie = prompt("Numéro(s) de place à libérer, séparés par des virgules (ex: 12, 127Bis, 133/5).");
+  if(saisie===null) return;
+  const ids = saisie.split(",").map(v=>v.trim()).filter(v=>v.length>0);
+  if(ids.length===0){ alert("Aucune place saisie."); return; }
+  const updated = {...spots}; const introuvables = [], dejaLibres = [], toLog = [];
+  ids.forEach(id=>{
+    const s = updated[id];
+    if(!s){ introuvables.push(id); return; }
+    if(s.status!=="occupied"){ dejaLibres.push(id); return; }
+    toLog.push({spotId:id, plate:s.plate, frigo:s.frigo, action:"sortie", time:new Date().toISOString()});
+    updated[id] = { id, status:"free", plate:null, category:null, frigo:false, entryTime:null, plannedDuration:null };
+  });
+  await saveState(updated);
+  for(const entry of toLog){ await pushHistory(entry); }
+  renderAll();
+  let msg = "";
+  if(toLog.length) msg += `✅ ${toLog.length} place(s) libérée(s).`;
+  if(dejaLibres.length) msg += `${msg?"\n":""}ℹ️ Déjà libres : ${dejaLibres.join(", ")}.`;
+  if(introuvables.length) msg += `${msg?"\n":""}❌ Introuvables : ${introuvables.join(", ")}.`;
+  alert(msg || "Aucune modification.");
+};
+
+/* ---------- réservations Travis ---------- */
+document.getElementById("editResvBtn").onclick = async () => {
+  const key = todayKey();
+  const current = reservations[key] || {total:0, consumed:0};
+  const saisie = prompt(`Nombre total de réservations Travis pour aujourd'hui (déjà consommées : ${current.consumed}) :`, current.total);
+  if(saisie===null) return;
+  const n = parseInt(saisie, 10);
+  if(isNaN(n) || n<0){ alert("Merci de saisir un nombre valide."); return; }
+  const updated = {...reservations, [key]: {total:n, consumed: current.consumed}};
+  await saveReservations(updated);
+  renderStats();
+};
+
+/* ---------- catégories ---------- */
+document.getElementById("catBtn").onclick = openCategoriesModal;
+function openCategoriesModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  body.innerHTML = `
+    <h3>Catégories / type de règlement</h3>
+    <div class="sub">Chaque catégorie a une couleur affichée sur les places occupées.</div>
+    <div class="cat-list" id="catList"></div>
+    <div class="modal-actions">
+      <button class="btn" id="addCatBtn">➕ Ajouter une catégorie</button>
+      <button class="btn primary" id="saveCatBtn">Enregistrer</button>
+    </div>
+  `;
+  overlay.classList.remove("hidden");
+  let draft = categories.map(c=>({...c}));
+  function renderDraft(){
+    const list = document.getElementById("catList");
+    list.innerHTML = "";
+    draft.forEach((c,idx)=>{
+      const row = document.createElement("div");
+      row.className = "cat-row";
+      row.innerHTML = `
+        <input type="color" value="${c.color}" data-idx="${idx}" class="colorInput">
+        <input type="text" value="${escapeHTML(c.label)}" data-idx="${idx}" class="labelInput">
+        <button class="del" data-idx="${idx}">✕</button>
+      `;
+      list.appendChild(row);
+    });
+    list.querySelectorAll(".colorInput").forEach(inp=>inp.oninput = e=>{ draft[+e.target.dataset.idx].color = e.target.value; });
+    list.querySelectorAll(".labelInput").forEach(inp=>inp.oninput = e=>{ draft[+e.target.dataset.idx].label = e.target.value; });
+    list.querySelectorAll(".del").forEach(btn=>btn.onclick = e=>{ draft.splice(+e.target.dataset.idx,1); renderDraft(); });
+  }
+  renderDraft();
+  document.getElementById("addCatBtn").onclick = () => {
+    draft.push({ id: "cat_" + Date.now(), label:"Nouvelle catégorie", color:"#888888" });
+    renderDraft();
+  };
+  document.getElementById("saveCatBtn").onclick = async () => {
+    const cleaned = draft.filter(c=>c.label.trim().length>0);
+    await saveCategories(cleaned);
+    closeModal();
+    renderLegend();
+  };
+}
+
+/* ---------- tarif ---------- */
+document.getElementById("tariffBtn").onclick = openTariffModal;
+
+function openTariffModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  const draft = tariffTiers.map(t=>({...t}));
+  renderTariffModal(draft);
+  overlay.classList.remove("hidden");
+}
+
+function renderTariffModal(draft){
+  const body = document.getElementById("modalBody");
+  body.innerHTML = `
+    <h3>Grille tarifaire</h3>
+    <div class="sub">Créez vos propres paliers (ex: 1h — 5€, 72h — 90€). Ils apparaîtront au choix lors de l'occupation d'une place.</div>
+    <div class="tariff-list" id="tariffList"></div>
+    <div class="modal-actions">
+      <button class="btn" id="addTariffBtn">➕ Ajouter un palier</button>
+      <button class="btn" id="cancelTariffBtn">Annuler</button>
+      <button class="btn primary" id="saveTariffBtn">Enregistrer</button>
+    </div>
+  `;
+  const list = body.querySelector("#tariffList");
+  function renderRows(){
+    list.innerHTML = "";
+    draft.forEach((t,idx)=>{
+      const row = document.createElement("div");
+      row.className = "tariff-row";
+      row.innerHTML = `
+        <input type="number" min="0" step="0.5" value="${t.hours}" data-idx="${idx}" data-field="hours" style="max-width:80px">
+        <span class="unit">heures —</span>
+        <input type="number" min="0" step="0.5" value="${t.price}" data-idx="${idx}" data-field="price" style="max-width:90px">
+        <span class="unit">€</span>
+        <button class="del" data-idx="${idx}" title="Supprimer">✕</button>
+      `;
+      list.appendChild(row);
+    });
+    list.querySelectorAll("input").forEach(inp=>{
+      inp.oninput = e=>{ draft[+e.target.dataset.idx][e.target.dataset.field] = parseFloat(e.target.value)||0; };
+    });
+    list.querySelectorAll(".del").forEach(btn=>{
+      btn.onclick = e=>{ draft.splice(+e.target.dataset.idx,1); renderRows(); };
+    });
+  }
+  renderRows();
+
+  document.getElementById("addTariffBtn").onclick = () => {
+    draft.push({ id:"tariff_"+Date.now(), hours:1, price:0 });
+    renderRows();
+  };
+  document.getElementById("cancelTariffBtn").onclick = closeModal;
+  document.getElementById("saveTariffBtn").onclick = async () => {
+    const cleaned = draft.filter(t=>t.hours>0).sort((a,b)=>a.hours-b.hours);
+    await saveTariffTiers(cleaned);
+    closeModal();
+  };
+}
+
+/* ---------- export état actuel ---------- */
+document.getElementById("exportCsvBtn").onclick = () => {
+  let csv = "Place,Immatriculation,Catégorie,Frigo,Heure Arrivée,Durée prévue (h),Statut\n";
+  orderedSlots.forEach(id=>{
+    const s = spots[id];
+    const cat = s.category ? (getCategory(s.category)?.label || "") : "";
+    csv += `${id},${s.plate||""},${cat},${s.frigo?"Oui":"Non"},${s.entryTime?formatDateTimeShort(s.entryTime):""},${s.plannedDuration||""},${s.status==="occupied"?"OCCUPEE":"LIBRE"}\n`;
+  });
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "parking_data.csv"; a.click();
+  URL.revokeObjectURL(url);
+};
+document.getElementById("exportPdfBtn").onclick = () => {
+  const dateStr = new Date().toLocaleString("fr-FR");
+  let html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Export parking</title>
+  <style>body{font-family:Arial,sans-serif;margin:24px;} h1{font-size:20px;margin-bottom:4px;} h2{font-size:14px;font-weight:normal;color:#555;margin-top:0;}
+  table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;} th{background:#f0f0f0;}
+  .occ{color:#c62828;font-weight:bold;} @media print{@page{size:A4 portrait;margin:12mm;} body{margin:0;}}</style></head><body>
+  <h1>Parking Poids Lourds — Export</h1><h2>Généré le ${dateStr}</h2>
+  <table><thead><tr><th>Place</th><th>Immatriculation</th><th>Catégorie</th><th>Arrivée</th><th>Statut</th></tr></thead><tbody>`;
+  orderedSlots.forEach(id=>{
+    const s = spots[id];
+    const cat = s.category ? (getCategory(s.category)?.label || "") : "";
+    html += `<tr><td>${id}</td><td>${s.plate||""}</td><td>${cat}</td><td>${s.entryTime?formatDateTimeShort(s.entryTime):"-"}</td><td class="${s.status==='occupied'?'occ':''}">${s.status==="occupied"?"OCCUPEE":"LIBRE"}</td></tr>`;
+  });
+  html += `</tbody></table></body></html>`;
+  const w = window.open("", "_blank"); w.document.open(); w.document.write(html); w.document.close(); w.focus(); w.print();
+};
+
+/* ---------- synthèse CA ---------- */
+document.getElementById("caBtn").onclick = () => openCAModal("day");
+
+function computePeriodRange(period){
+  const now = new Date();
+  let start, end, label;
+  if(period==='day'){ start = new Date(now.getFullYear(), now.getMonth(), now.getDate()); end = new Date(start); end.setDate(end.getDate()+1); label = "Aujourd'hui"; }
+  if(period==='week'){ const day=(now.getDay()+6)%7; start = new Date(now.getFullYear(), now.getMonth(), now.getDate()-day); end = new Date(start); end.setDate(end.getDate()+7); label = "Cette semaine"; }
+  if(period==='month'){ start = new Date(now.getFullYear(), now.getMonth(),1); end = new Date(now.getFullYear(), now.getMonth()+1,1); label = "Ce mois-ci"; }
+  if(period==='year'){ start = new Date(now.getFullYear(),0,1); end = new Date(now.getFullYear()+1,0,1); label = "Cette année"; }
+  return {start,end,label};
+}
+
+function buildCAReport(period){
+  const {start,end,label} = computePeriodRange(period);
+  const entries = history.filter(h => h.action==='entrée' && typeof h.price === 'number' && new Date(h.time)>=start && new Date(h.time)<end);
+  const byCategory = {};
+  let total = 0;
+  entries.forEach(e=>{
+    const catLabel = e.categoryLabel || 'Non catégorisé';
+    if(!byCategory[catLabel]) byCategory[catLabel] = {count:0, sum:0};
+    byCategory[catLabel].count++; byCategory[catLabel].sum += e.price;
+    total += e.price;
+  });
+  return { entries, byCategory, total, count: entries.length, label };
+}
+
+function openCAModal(period){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  renderCAModal(period);
+  overlay.classList.remove("hidden");
+}
+
+function renderCAModal(period){
+  const body = document.getElementById("modalBody");
+  const report = buildCAReport(period);
+  const periods = [["day","Jour"],["week","Semaine"],["month","Mois"],["year","Année"]];
+  let tabsHTML = periods.map(([key,label])=>`<button class="period-tab ${period===key?'active':''}" data-period="${key}">${label}</button>`).join("");
+  let rowsHTML = Object.entries(report.byCategory).map(([cat,d])=>`<tr><td>${escapeHTML(cat)}</td><td>${d.count}</td><td>${d.sum.toFixed(2)} €</td></tr>`).join("");
+  if(!rowsHTML) rowsHTML = `<tr><td colspan="3" style="color:var(--text-faint)">Aucun passage sur cette période.</td></tr>`;
+
+  body.innerHTML = `
+    <h3>Synthèse CA — ${report.label}</h3>
+    <div class="sub">${tariffTiers.length} palier${tariffTiers.length>1?'s':''} tarifaire${tariffTiers.length>1?'s':''} défini${tariffTiers.length>1?'s':''}</div>
+    <div class="period-tabs" id="periodTabs">${tabsHTML}</div>
+    <div class="ca-summary">
+      <div class="ca-summary-item"><div class="lbl">Passages</div><div class="val">${report.count}</div></div>
+      <div class="ca-summary-item"><div class="lbl">CA total</div><div class="val">${report.total.toFixed(2)} €</div></div>
+    </div>
+    <table class="ca-table">
+      <thead><tr><th>Catégorie</th><th>Passages</th><th>CA</th></tr></thead>
+      <tbody>${rowsHTML}<tr class="total-row"><td>TOTAL</td><td>${report.count}</td><td>${report.total.toFixed(2)} €</td></tr></tbody>
+    </table>
+    <div class="modal-actions">
+      <button class="btn" id="closeCA">Fermer</button>
+      <button class="btn" id="exportCAExcel">📊 Excel</button>
+      <button class="btn primary" id="exportCAPdf">🖨️ PDF</button>
+    </div>
+  `;
+  document.getElementById("periodTabs").querySelectorAll(".period-tab").forEach(btn=>{
+    btn.onclick = () => renderCAModal(btn.dataset.period);
+  });
+  document.getElementById("closeCA").onclick = closeModal;
+  document.getElementById("exportCAExcel").onclick = () => exportCAExcel(period, report);
+  document.getElementById("exportCAPdf").onclick = () => exportCAPdf(period, report);
+}
+
+function exportCAExcel(period, report){
+  const rows = [["Catégorie","Nombre de passages","CA (€)"]];
+  Object.entries(report.byCategory).forEach(([cat,d])=> rows.push([cat, d.count, d.sum.toFixed(2)]));
+  rows.push(["TOTAL", report.count, report.total.toFixed(2)]);
+  try{
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Synthese CA");
+    XLSX.writeFile(wb, `synthese_CA_${period}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }catch(e){ alert("Export Excel indisponible pour le moment."); }
+}
+
+function exportCAPdf(period, report){
+  const dateStr = new Date().toLocaleString("fr-FR");
+  let rowsHTML = Object.entries(report.byCategory).map(([cat,d])=>`<tr><td>${cat}</td><td>${d.count}</td><td>${d.sum.toFixed(2)} €</td></tr>`).join("");
+  let html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Synthèse CA</title>
+  <style>body{font-family:Arial,sans-serif;margin:24px;} h1{font-size:20px;margin-bottom:4px;} h2{font-size:14px;font-weight:normal;color:#555;margin-top:0;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px;} th,td{border:1px solid #ddd;padding:8px;text-align:left;} th{background:#f0f0f0;}
+  tr.total td{font-weight:bold;background:#fafafa;} @media print{@page{size:A4 portrait;margin:12mm;} body{margin:0;}}</style></head><body>
+  <h1>Synthèse CA — ${report.label}</h1><h2>Généré le ${dateStr}</h2>
+  <table><thead><tr><th>Catégorie</th><th>Passages</th><th>CA</th></tr></thead><tbody>${rowsHTML}
+  <tr class="total"><td>TOTAL</td><td>${report.count}</td><td>${report.total.toFixed(2)} €</td></tr></tbody></table>
+  </body></html>`;
+  const w = window.open("", "_blank"); w.document.open(); w.document.write(html); w.document.close(); w.focus(); w.print();
+}
+
+/* ---------- gestion des emplacements ---------- */
+document.getElementById("slotsBtn").onclick = openSlotsModal;
+
+function openSlotsModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  const draft = orderedSlots.map(id => ({ orig:id, val:id }));
+  renderSlotsModal(draft);
+  overlay.classList.remove("hidden");
+}
+
+function renderSlotsModal(draft){
+  const body = document.getElementById("modalBody");
+  body.innerHTML = `
+    <h3>Gérer les emplacements</h3>
+    <div class="sub">Renommez, ajoutez ou supprimez des places. ${draft.length} place${draft.length>1?'s':''} au total.</div>
+    <div class="slot-list" id="slotList"></div>
+    <div class="modal-actions">
+      <button class="btn" id="addSlotBtn">➕ Ajouter une place</button>
+      <button class="btn" id="cancelSlotsBtn">Annuler</button>
+      <button class="btn primary" id="saveSlotsBtn">Enregistrer</button>
+    </div>
+  `;
+  const list = body.querySelector("#slotList");
+  function renderRows(){
+    list.innerHTML = "";
+    draft.forEach((row, idx)=>{
+      const s = row.orig ? spots[row.orig] : null;
+      const occTag = s && s.status==="occupied" ? `<span class="occ-tag">occupée · ${escapeHTML(s.plate||"")}</span>` : "";
+      const div = document.createElement("div");
+      div.className = "slot-row";
+      div.innerHTML = `<input type="text" value="${escapeHTML(row.val)}" data-idx="${idx}"> ${occTag} <button class="del" data-idx="${idx}" title="Supprimer">✕</button>`;
+      list.appendChild(div);
+    });
+    list.querySelectorAll("input[type=text]").forEach(inp=>{
+      inp.oninput = e => { draft[+e.target.dataset.idx].val = e.target.value; };
+    });
+    list.querySelectorAll(".del").forEach(btn=>{
+      btn.onclick = e => { draft.splice(+e.target.dataset.idx, 1); renderRows(); };
+    });
+  }
+  renderRows();
+
+  document.getElementById("addSlotBtn").onclick = () => {
+    draft.push({ orig:null, val:"" });
+    renderRows();
+    const inputs = list.querySelectorAll("input[type=text]");
+    if(inputs.length) inputs[inputs.length-1].focus();
+  };
+  document.getElementById("cancelSlotsBtn").onclick = closeModal;
+  document.getElementById("saveSlotsBtn").onclick = async () => {
+    const vals = draft.map(r => r.val.trim());
+    if(vals.some(v => v.length===0)){ alert("Aucun numéro de place ne peut être vide."); return; }
+    const dupes = vals.filter((v,i)=>vals.indexOf(v)!==i);
+    if(dupes.length){ alert("Numéros en double : " + [...new Set(dupes)].join(", ")); return; }
+
+    const removedIds = orderedSlots.filter(id => !draft.some(r => r.orig===id));
+    const removedOccupied = removedIds.filter(id => spots[id] && spots[id].status==="occupied");
+    if(removedIds.length){
+      const msg = `Vous supprimez ${removedIds.length} place(s) : ${removedIds.join(", ")}.` +
+        (removedOccupied.length ? `\n⚠️ ${removedOccupied.length} sont actuellement occupées (${removedOccupied.join(", ")}) — leurs données seront perdues.` : "") +
+        `\n\nConfirmer ?`;
+      if(!confirm(msg)) return;
+    }
+
+    const newSpots = {};
+    draft.forEach(row=>{
+      const val = row.val.trim();
+      const prev = row.orig && spots[row.orig] ? spots[row.orig] : null;
+      newSpots[val] = prev ? {...prev, id: val} : { id: val, status:"free", plate:null, category:null, frigo:false, entryTime:null, plannedDuration:null };
+    });
+    const newOrder = draft.map(r => r.val.trim());
+
+    orderedSlots = newOrder;
+    await saveKey(SLOTS_KEY, newOrder, "liste des emplacements");
+    await saveState(newSpots);
+    closeModal();
+    renderZoneButtons();
+    renderAll();
+  };
+}
+
+/* ---------- journal complet ---------- */
+document.getElementById("journalBtn").onclick = () => openJournalModal();
+
+function openJournalModal(filter){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  renderJournalModal(filter||"");
+  overlay.classList.remove("hidden");
+}
+
+function renderJournalModal(filter){
+  const body = document.getElementById("modalBody");
+  const q = (filter||"").trim().toUpperCase();
+  const filtered = history.filter((h,idx)=>{ h.__idx = idx; return true; })
+    .filter(h => !q || (h.plate && h.plate.toUpperCase().includes(q)) || String(h.spotId).toUpperCase().includes(q));
+
+  let rowsHTML = filtered.map(h=>{
+    let actLabel = h.action;
+    return `<div class="journal-full-row">
+      <span>${formatDateTimeShort(h.time)} — place <b>${h.spotId}</b> — ${escapeHTML(actLabel)}${h.frigo?' 🧊':''} — ${escapeHTML(h.plate||"")}${h.categoryLabel?(' — '+escapeHTML(h.categoryLabel)):''}${typeof h.price==='number'?(' — '+h.price.toFixed(2)+' €'):''}</span>
+      <button class="del" data-idx="${h.__idx}" title="Supprimer cette ligne">✕</button>
+    </div>`;
+  }).join("");
+  if(!rowsHTML) rowsHTML = `<div class="journal-empty">Aucune ligne ne correspond.</div>`;
+
+  body.innerHTML = `
+    <h3>Journal complet</h3>
+    <div class="sub">${history.length} entrée${history.length>1?'s':''} au total. Supprimez une ligne avec la croix (utile pour retirer des tests).</div>
+    <div class="journal-filter"><input id="journalFilterInput" placeholder="Filtrer par plaque ou numéro de place…" value="${escapeHTML(filter||"")}"></div>
+    <div class="journal-full" id="journalFullList">${rowsHTML}</div>
+    <div class="modal-actions">
+      <button class="btn" id="closeJournalBtn">Fermer</button>
+    </div>
+  `;
+  document.getElementById("closeJournalBtn").onclick = closeModal;
+  document.getElementById("journalFilterInput").addEventListener("input", (e)=>{ renderJournalModal(e.target.value); document.getElementById("journalFilterInput").focus(); });
+  body.querySelectorAll(".journal-full-row .del").forEach(btn=>{
+    btn.onclick = async () => {
+      const idx = +btn.dataset.idx;
+      if(!confirm("Supprimer définitivement cette ligne du journal ?")) return;
+      history.splice(idx, 1);
+      await saveKey(HISTORY_KEY, history, "historique");
+      lastHistJSON = JSON.stringify(history);
+      renderJournalModal(document.getElementById("journalFilterInput").value);
+      renderJournal();
+    };
+  });
+}
+
+/* ---------- modale occupation / libération individuelle ---------- */
+function nowHHMM(){ const d = new Date(); return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0"); }
+
+function openModal(id){
+  modalOpen = true;
+  const s = spots[id];
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal";
+
+  if(s.status==="free"){
+    const catOptions = categories.map(c=>`<option value="${c.id}">${escapeHTML(c.label)}</option>`).join("");
+    const tariffOptions = tariffTiers.map(t=>`<option value="${t.id}">${t.hours}h — ${t.price}€</option>`).join("");
+    const r = reservations[todayKey()] || {total:0, consumed:0};
+    const remaining = r.total - r.consumed;
+    body.innerHTML = `
+      <h3>Place ${id}</h3>
+      <div class="sub">${isFrigoZone(id) ? "Zone frigo" : "Zone standard"} · libre</div>
+      <div class="field"><label>Plaque d'immatriculation</label><input id="plateInput" placeholder="AB-123-CD" autofocus></div>
+      <div class="err" id="modalErr">Merci de saisir une plaque.</div>
+      <div class="field"><label>Catégorie / type de règlement</label><select id="catInput"><option value="">Sélectionner…</option>${catOptions}</select></div>
+      <div class="field"><label>Heure d'entrée</label><input id="timeInput" type="time" value="${nowHHMM()}"></div>
+      <div class="field">
+        <label>Tarif / durée prévue</label>
+        <select id="tariffInput">
+          <option value="">Sans tarif défini (durée libre)</option>
+          ${tariffOptions}
+          <option value="custom">Personnalisé…</option>
+        </select>
+      </div>
+      <div class="field" id="customDurWrap" style="display:none;"><label>Durée personnalisée (h)</label><input id="durInput" type="number" min="0" step="0.25" placeholder="Ex: 4"></div>
+      <div class="field checkbox"><input type="checkbox" id="frigoInput"><label for="frigoInput">🧊 Camion frigo</label></div>
+      <div class="field checkbox"><input type="checkbox" id="resvInput"><label for="resvInput">Correspond à une réservation Travis du jour (restant : ${remaining})</label></div>
+      <div class="modal-actions">
+        <button class="btn" id="cancelBtn">Annuler</button>
+        <button class="btn primary" id="confirmBtn">Occuper la place</button>
+      </div>
+    `;
+    overlay.classList.remove("hidden");
+    document.getElementById("cancelBtn").onclick = closeModal;
+    document.getElementById("confirmBtn").onclick = () => confirmOccupy(id);
+    document.getElementById("tariffInput").onchange = (e) => {
+      document.getElementById("customDurWrap").style.display = e.target.value==="custom" ? "block" : "none";
+    };
+    document.getElementById("plateInput").focus();
+  }else{
+    const di = durationInfo(s);
+    const cat = s.category ? getCategory(s.category) : null;
+    body.innerHTML = `
+      <h3>Place ${id}</h3>
+      <div class="sub">${isFrigoZone(id) ? "Zone frigo" : "Zone standard"} · occupée${s.frigo ? " · 🧊 camion frigo":""}</div>
+      <div class="modal-info">
+        <b>Plaque</b> — ${escapeHTML(s.plate)}<br>
+        <b>Catégorie</b> — ${cat ? escapeHTML(cat.label) : "—"}<br>
+        <b>Entrée</b> — ${formatDateTimeShort(s.entryTime)}<br>
+        <b>${s.plannedDuration ? "Temps restant" : "Temps écoulé"}</b> — ${di.label}
+        ${s.plannedDuration ? `<br><b>Durée prévue</b> — ${s.plannedDuration}h` : ""}
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="cancelBtn">Fermer</button>
+        ${s.plannedDuration ? `<button class="btn" id="extendBtn">+1h</button>` : ""}
+        <button class="btn danger" id="freeBtn">Libérer la place</button>
+      </div>
+    `;
+    overlay.classList.remove("hidden");
+    document.getElementById("cancelBtn").onclick = closeModal;
+    document.getElementById("freeBtn").onclick = () => confirmRelease(id);
+    const extendBtn = document.getElementById("extendBtn");
+    if(extendBtn) extendBtn.onclick = () => { quickExtend(id); closeModal(); };
+  }
+}
+
+function closeModal(){ modalOpen = false; document.getElementById("overlay").classList.add("hidden"); }
+
+async function confirmOccupy(id){
+  const plateVal = document.getElementById("plateInput").value.trim();
+  const catVal = document.getElementById("catInput").value;
+  const timeVal = document.getElementById("timeInput").value;
+  const tariffVal = document.getElementById("tariffInput").value;
+  const durVal = document.getElementById("durInput") ? document.getElementById("durInput").value : "";
+  const frigoVal = document.getElementById("frigoInput").checked;
+  const resvVal = document.getElementById("resvInput").checked;
+  if(!plateVal){ document.getElementById("modalErr").style.display = "block"; return; }
+
+  let entryDate = new Date();
+  if(timeVal){
+    const [hh,mm] = timeVal.split(":").map(Number);
+    entryDate.setHours(hh, mm, 0, 0);
+    if(entryDate.getTime() > Date.now()) entryDate.setDate(entryDate.getDate()-1);
+  }
+  const cat = catVal ? getCategory(catVal) : null;
+
+  let plannedDuration = null, price = 0;
+  if(tariffVal === "custom"){
+    plannedDuration = durVal ? parseFloat(durVal) : null;
+    price = 0;
+  }else if(tariffVal){
+    const tier = tariffTiers.find(t=>t.id===tariffVal);
+    if(tier){ plannedDuration = tier.hours; price = tier.price; }
+  }
+
+  const updated = {...spots};
+  updated[id] = {
+    id, status:"occupied", plate: plateVal.toUpperCase(), category: catVal || null, frigo: frigoVal,
+    entryTime: entryDate.toISOString(), plannedDuration
+  };
+  closeModal();
+  await saveState(updated);
+  await pushHistory({
+    spotId:id, plate:plateVal.toUpperCase(), frigo:frigoVal, action:"entrée", time:new Date().toISOString(),
+    category: catVal || null, categoryLabel: cat ? cat.label : null, price
+  });
+  if(resvVal){
+    const key = todayKey();
+    const r = reservations[key] || {total:0, consumed:0};
+    const updatedResv = {...reservations, [key]: {total:r.total, consumed:r.consumed+1}};
+    await saveReservations(updatedResv);
+  }
+  renderAll();
+}
+
+async function confirmRelease(id){
+  const s = spots[id];
+  const plate = s.plate, frigo = s.frigo;
+  const updated = {...spots};
+  updated[id] = { id, status:"free", plate:null, category:null, frigo:false, entryTime:null, plannedDuration:null };
+  closeModal();
+  await saveState(updated);
+  await pushHistory({spotId:id, plate, frigo, action:"sortie", time:new Date().toISOString()});
+  renderAll();
+}
+
+async function quickExtend(id){
+  const s = spots[id];
+  if(!s || s.status!=="occupied") return;
+  const saisie = prompt(`Ajouter combien d'heures à la place ${id} ? (durée prévue actuelle : ${s.plannedDuration||0}h)`, "1");
+  if(saisie===null) return;
+  const n = parseFloat(saisie.replace(",","."));
+  if(isNaN(n) || n<=0){ alert("Merci de saisir un nombre d'heures valide."); return; }
+  const updated = {...spots};
+  updated[id] = {...s, plannedDuration: (s.plannedDuration||0) + n};
+  await saveState(updated);
+  await pushHistory({spotId:id, plate:s.plate, frigo:s.frigo, action:`ajustement +${n}h`, time:new Date().toISOString()});
+  renderAll();
+}
+
+/* ---------- horloge / polling ---------- */
+function tickClock(){ document.getElementById("clock").textContent = new Date().toLocaleTimeString("fr-FR"); }
+
+async function pollRemote(){
+  if(modalOpen || releaseMode) return;
+  const remoteSlots = await loadKey(SLOTS_KEY, null);
+  const remoteState = await loadKey(STATE_KEY, null);
+  const remoteHist = await loadKey(HISTORY_KEY, null);
+  const remoteCats = await loadKey(CATEGORIES_KEY, null);
+  const remoteResv = await loadKey(RESERVATIONS_KEY, null);
+  const remoteTariff = await loadKey(TARIFF_KEY, null);
+  const remoteLicenseStatus = await fetchLicenseStatus();
+
+  let needsRender = false;
+  if(remoteSlots){ const j = JSON.stringify(remoteSlots); if(j !== lastSlotsJSON){ lastSlotsJSON = j; orderedSlots = remoteSlots; renderZoneButtons(); needsRender = true; } }
+  if(remoteState){ const j = JSON.stringify(remoteState); if(j !== lastStateJSON){ lastStateJSON = j; spots = remoteState; needsRender = true; } }
+  if(remoteHist){ const j = JSON.stringify(remoteHist); if(j !== lastHistJSON){ lastHistJSON = j; history = remoteHist; renderJournal(); } }
+  if(remoteCats){ const j = JSON.stringify(remoteCats); if(j !== lastCatJSON){ lastCatJSON = j; categories = remoteCats; renderLegend(); } }
+  if(remoteResv){ const j = JSON.stringify(remoteResv); if(j !== lastResvJSON){ lastResvJSON = j; reservations = remoteResv; } }
+  if(remoteTariff){ const j = JSON.stringify(remoteTariff); if(j !== lastTariffJSON){ lastTariffJSON = j; tariffTiers = remoteTariff; } }
+  if(remoteLicenseStatus){
+    const j = JSON.stringify(remoteLicenseStatus);
+    if(j !== lastLicenseJSON){
+      const wasBlocked = license.blocked;
+      lastLicenseJSON = j; license = remoteLicenseStatus; applyLockState();
+      if(wasBlocked && !license.blocked){ await loadAllData(); }
+    }
+  }
+
+  if(needsRender){ renderStats(); renderGrid(); renderAlertBar(); }
+}
+
+async function loadAllData(){
+  document.getElementById("searchInput").addEventListener("input", (e)=>{ searchQuery = e.target.value; renderGrid(); });
+
+  let existingSlots = await loadKey(SLOTS_KEY, null);
+  if(!existingSlots || !Array.isArray(existingSlots) || existingSlots.length===0){ existingSlots = defaultSlotsList(); await saveKey(SLOTS_KEY, existingSlots, "liste des emplacements"); }
+  orderedSlots = existingSlots; lastSlotsJSON = JSON.stringify(orderedSlots);
+
+  let existingState = await loadKey(STATE_KEY, null);
+  const validState = existingState && typeof existingState === "object" && orderedSlots.every(id => existingState[id]);
+  if(!validState){
+    const rebuilt = {};
+    orderedSlots.forEach(id => { rebuilt[id] = (existingState && existingState[id]) ? existingState[id] : { id, status:"free", plate:null, category:null, frigo:false, entryTime:null, plannedDuration:null }; });
+    existingState = rebuilt;
+    await saveState(existingState);
+  }
+  spots = existingState; lastStateJSON = JSON.stringify(spots);
+
+  let existingCats = await loadKey(CATEGORIES_KEY, null);
+  if(!existingCats || !Array.isArray(existingCats) || existingCats.length===0){ existingCats = DEFAULT_CATEGORIES; await saveCategories(existingCats); }
+  categories = existingCats; lastCatJSON = JSON.stringify(categories);
+
+  let existingResv = await loadKey(RESERVATIONS_KEY, {});
+  reservations = existingResv || {}; lastResvJSON = JSON.stringify(reservations);
+
+  let existingTariff = await loadKey(TARIFF_KEY, null);
+  if(!existingTariff || !Array.isArray(existingTariff)){ existingTariff = DEFAULT_TARIFFS; await saveTariffTiers(existingTariff); }
+  tariffTiers = existingTariff; lastTariffJSON = JSON.stringify(tariffTiers);
+
+  history = await loadKey(HISTORY_KEY, []); lastHistJSON = JSON.stringify(history);
+
+  renderAll();
+}
+
+async function init(){
+  const status = await fetchLicenseStatus();
+  license = status || { blocked:false, locked:false, paidUntil:null };
+  lastLicenseJSON = JSON.stringify(license);
+  applyLockState();
+
+  renderZoneButtons();
+  tickClock();
+  setInterval(tickClock, 1000);
+  setInterval(()=>{ if(!modalOpen && !releaseMode){ renderGrid(); renderAlertBar(); renderStats(); } }, 30000);
+  setInterval(pollRemote, POLL_MS);
+
+  if(license.blocked) return; // le polling reste actif pour détecter un futur déblocage
+  await loadAllData();
+}
+
+init();
+</script>
+</body>
+</html>
