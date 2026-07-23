@@ -1,5 +1,4 @@
-const { Redis } = require('@upstash/redis');
-const kv = Redis.fromEnv();
+const { kvGet, kvSet } = require('./_redis');
 
 const LICENSE_KEY = 'parking:license';
 const DEFAULT_ADMIN_CODE = '1234';
@@ -16,12 +15,12 @@ function computeStatus(lic) {
 }
 
 module.exports = async (req, res) => {
-  let lic = await kv.get(LICENSE_KEY);
+  let lic = await kvGet(LICENSE_KEY);
   if (!lic) {
     const d = new Date();
     d.setDate(d.getDate() + 30);
     lic = { locked: false, paidUntil: d.toISOString().slice(0, 10), adminCode: DEFAULT_ADMIN_CODE };
-    await kv.set(LICENSE_KEY, lic);
+    await kvSet(LICENSE_KEY, lic);
   }
 
   if (req.method === 'GET') {
@@ -39,7 +38,7 @@ module.exports = async (req, res) => {
       paidUntil: paidUntil !== undefined ? paidUntil : lic.paidUntil,
       adminCode: newCode && newCode.trim() ? newCode.trim() : lic.adminCode
     };
-    await kv.set(LICENSE_KEY, updated);
+    await kvSet(LICENSE_KEY, updated);
     return res.status(200).json(computeStatus(updated));
   }
 

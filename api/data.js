@@ -1,11 +1,10 @@
-const { Redis } = require('@upstash/redis');
-const kv = Redis.fromEnv();
+const { kvGet, kvSet } = require('./_redis');
 
 const ALLOWED_TYPES = ['state', 'slots', 'categories', 'reservations', 'tariff', 'history'];
 const LICENSE_KEY = 'parking:license';
 
 async function isLicenseBlocked() {
-  const lic = await kv.get(LICENSE_KEY);
+  const lic = await kvGet(LICENSE_KEY);
   if (!lic) return false; // pas encore de licence créée = premier lancement, non bloqué
   if (lic.locked) return true;
   if (lic.paidUntil) {
@@ -29,7 +28,7 @@ module.exports = async (req, res) => {
   const key = `parking:${type}`;
 
   if (req.method === 'GET') {
-    const value = await kv.get(key);
+    const value = await kvGet(key);
     return res.status(200).json({ value: value ?? null });
   }
 
@@ -38,7 +37,7 @@ module.exports = async (req, res) => {
     if (body.value === undefined) {
       return res.status(400).json({ error: 'missing value' });
     }
-    await kv.set(key, body.value);
+    await kvSet(key, body.value);
     return res.status(200).json({ ok: true });
   }
 
