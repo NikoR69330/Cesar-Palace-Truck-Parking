@@ -119,7 +119,7 @@
   .journal-empty{color:var(--text-faint);font-size:12px;}
   .footnote{font-size:11px;color:var(--text-faint);margin-top:8px;font-family:var(--mono);}
 
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:250;padding:16px;overflow-y:auto;;}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:250;padding:16px;overflow-y:auto;}
   .overlay.hidden{display:none;}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;width:100%;max-width:420px;margin:auto;}
   .modal.wide{max-width:640px;}
@@ -201,6 +201,23 @@
     <button id="lockAdminBtn">Administration</button>
   </div>
 </div>
+<div class="lock-screen" id="loginScreen">
+  <div class="lock-card">
+    <img class="lock-logo" src="" id="loginLogo" alt="">
+    <h2>Connexion</h2>
+    <p style="margin-bottom:20px;">Entrez votre identifiant et votre mot de passe pour accéder à l'outil.</p>
+    <div class="field" style="text-align:left;">
+      <label>Identifiant</label>
+      <input type="text" id="loginUsername" autocomplete="username">
+    </div>
+    <div class="field" style="text-align:left;">
+      <label>Mot de passe</label>
+      <input type="password" id="loginPassword" autocomplete="current-password">
+    </div>
+    <div class="err" id="loginErr" style="display:none;">Identifiant ou mot de passe incorrect.</div>
+    <button id="loginSubmitBtn" style="width:100%; background:var(--amber); color:#1a1400; border:none; border-radius:8px; padding:11px; font-weight:700; cursor:pointer; font-family:var(--sans); font-size:13px;">Se connecter</button>
+  </div>
+</div>
 <div class="wrap">
 
   <header>
@@ -212,7 +229,10 @@
         <div class="clock" id="clock">--:--:--</div>
       </div>
     </div>
-    <div class="status-pill"><span class="dot" id="syncDot"></span><span id="syncLabel">synchronisé</span></div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="status-pill" id="userBadge" style="display:none;"><span id="userBadgeName"></span><button id="logoutBtn" style="background:none; border:none; color:var(--text-faint); text-decoration:underline; cursor:pointer; font-family:var(--mono); font-size:11px; margin-left:8px;">déconnexion</button></div>
+      <div class="status-pill"><span class="dot" id="syncDot"></span><span id="syncLabel">synchronisé</span></div>
+    </div>
   </header>
 
   <div class="banner" id="errBanner"></div>
@@ -243,7 +263,8 @@
     <button class="btn-sm" id="catBtn">🎨 Catégories</button>
     <button class="btn-sm" id="slotsBtn">🧩 Gérer les emplacements</button>
     <button class="btn-sm" id="tariffBtn">💶 Tarif</button>
-    <button class="btn-sm" id="caBtn">📈 Synthèse CA</button>
+    <button class="btn-sm" id="caBtn" style="display:none;">📈 Synthèse CA</button>
+    <button class="btn-sm" id="usersBtn" style="display:none;">👥 Comptes</button>
     <button class="btn-sm" id="journalBtn">📋 Journal complet</button>
     <button class="btn-sm" id="exportCsvBtn">📊 Export CSV</button>
     <button class="btn-sm" id="exportPdfBtn">🖨️ Export PDF</button>
@@ -345,8 +366,9 @@ function showError(msg){
 /* ---------- storage helpers ---------- */
 async function loadKey(type, fallback){
   try{
-    const res = await fetch(`/api/data?type=${type}`);
+    const res = await fetch(`/api/data?type=${type}&token=${encodeURIComponent(sessionToken||"")}`);
     if(res.status === 403){ license = {...license, blocked:true}; applyLockState(); return fallback; }
+    if(res.status === 401){ showLoginScreen(); return fallback; }
     if(!res.ok) return fallback;
     const data = await res.json();
     return (data.value === null || data.value === undefined) ? fallback : data.value;
@@ -354,10 +376,11 @@ async function loadKey(type, fallback){
 }
 async function saveKey(type, value, label){
   try{
-    const res = await fetch(`/api/data?type=${type}`, {
+    const res = await fetch(`/api/data?type=${type}&token=${encodeURIComponent(sessionToken||"")}`, {
       method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({value})
     });
     if(res.status === 403){ license = {...license, blocked:true}; applyLockState(); return; }
+    if(res.status === 401){ showLoginScreen(); return; }
     if(!res.ok) throw new Error("échec");
     setSync(true, "synchronisé"); showError(null);
   }catch(e){
@@ -413,6 +436,170 @@ function durationInfo(spot){
 
 function escapeHTML(str){
   return String(str).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+/* ---------- comptes employés (connexion, rôles, gestion) ---------- */
+let sessionToken = sessionStorage.getItem("parkingSessionToken") || null;
+let currentUser = null; // { username, name, role }
+
+function showLoginScreen(){
+  sessionToken = null; currentUser = null;
+  sessionStorage.removeItem("parkingSessionToken");
+  document.getElementById("loginScreen").classList.add("show");
+  const logo = document.querySelector(".brand-logo");
+  const loginLogo = document.getElementById("loginLogo");
+  if(logo && loginLogo){ loginLogo.src = logo.src; }
+  document.getElementById("userBadge").style.display = "none";
+}
+function hideLoginScreen(){
+  document.getElementById("loginScreen").classList.remove("show");
+}
+
+async function fetchMe(token){
+  try{
+    const res = await fetch(`/api/auth?action=me&token=${encodeURIComponent(token)}`);
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(e){ return null; }
+}
+
+function applyUserUI(){
+  const badge = document.getElementById("userBadge");
+  const nameEl = document.getElementById("userBadgeName");
+  if(currentUser){
+    badge.style.display = "inline-flex";
+    nameEl.textContent = `${currentUser.name} · ${currentUser.role === "direction" ? "Direction" : "Salarié"}`;
+  }else{
+    badge.style.display = "none";
+  }
+  const isDirection = currentUser && currentUser.role === "direction";
+  document.getElementById("caBtn").style.display = isDirection ? "" : "none";
+  document.getElementById("usersBtn").style.display = isDirection ? "" : "none";
+}
+
+document.getElementById("loginSubmitBtn").onclick = async () => {
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const errEl = document.getElementById("loginErr");
+  errEl.style.display = "none";
+  if(!username || !password) { errEl.textContent = "Merci de remplir les deux champs."; errEl.style.display = "block"; return; }
+  try{
+    const res = await fetch("/api/auth", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ action:"login", username, password })
+    });
+    if(res.status === 401){ errEl.textContent = "Identifiant ou mot de passe incorrect."; errEl.style.display = "block"; return; }
+    if(!res.ok){ errEl.textContent = "Connexion au serveur impossible."; errEl.style.display = "block"; return; }
+    const data = await res.json();
+    sessionToken = data.token;
+    currentUser = { username: data.username, name: data.name, role: data.role };
+    sessionStorage.setItem("parkingSessionToken", sessionToken);
+    hideLoginScreen();
+    applyUserUI();
+    await loadAllData();
+  }catch(e){
+    errEl.textContent = "Connexion au serveur impossible."; errEl.style.display = "block";
+  }
+};
+document.getElementById("loginPassword").addEventListener("keydown", (e)=>{ if(e.key==="Enter") document.getElementById("loginSubmitBtn").click(); });
+
+document.getElementById("logoutBtn").onclick = async () => {
+  try{ await fetch("/api/auth", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ action:"logout", token: sessionToken }) }); }catch(e){}
+  showLoginScreen();
+};
+
+/* ---------- gestion des comptes (direction uniquement) ---------- */
+document.getElementById("usersBtn").onclick = openUsersModal;
+
+async function openUsersModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  body.innerHTML = `<h3>Comptes</h3><div class="sub">Chargement…</div>`;
+  overlay.classList.remove("hidden");
+  await renderUsersModal();
+}
+
+async function renderUsersModal(){
+  const body = document.getElementById("modalBody");
+  let users = [], logins = [];
+  try{
+    const [uRes, lRes] = await Promise.all([
+      fetch(`/api/auth?action=listUsers&token=${encodeURIComponent(sessionToken)}`),
+      fetch(`/api/auth?action=logins&token=${encodeURIComponent(sessionToken)}`)
+    ]);
+    if(uRes.ok) users = (await uRes.json()).users;
+    if(lRes.ok) logins = (await lRes.json()).logins;
+  }catch(e){}
+
+  const usersRows = users.map(u => `
+    <div class="cat-row">
+      <span style="flex:1; font-family:var(--mono); font-size:13px;">${escapeHTML(u.name)} <span style="color:var(--text-faint);">(${escapeHTML(u.username)})</span></span>
+      <span style="font-size:11px; color:${u.role==='direction' ? 'var(--amber)' : 'var(--text-dim)'}; font-family:var(--mono); text-transform:uppercase;">${u.role==='direction' ? 'Direction' : 'Salarié'}</span>
+      <button class="del" data-username="${escapeHTML(u.username)}" title="Supprimer">✕</button>
+    </div>
+  `).join("") || `<div class="journal-empty">Aucun compte.</div>`;
+
+  const loginsRows = logins.slice(0,15).map(l => `
+    <div class="journal-row"><span>${formatTimeShort(l.time)} — ${escapeHTML(l.name)}</span><span style="color:var(--text-faint);">${l.role==='direction'?'Direction':'Salarié'}</span></div>
+  `).join("") || `<div class="journal-empty">Aucune connexion enregistrée.</div>`;
+
+  body.innerHTML = `
+    <h3>Comptes</h3>
+    <div class="sub">Crée un compte par salarié. Les comptes "Salarié" ne voient jamais le chiffre d'affaires.</div>
+    <div class="cat-list" id="usersList">${usersRows}</div>
+    <div class="modal-actions" style="margin-bottom:22px;">
+      <button class="btn" id="showAddUserBtn">➕ Ajouter un compte</button>
+    </div>
+    <div id="addUserForm" style="display:none; margin-bottom:22px;">
+      <div class="field"><label>Nom affiché</label><input type="text" id="newUserName" placeholder="Ex: Jean Dupont"></div>
+      <div class="field"><label>Identifiant</label><input type="text" id="newUserUsername" placeholder="ex: jdupont"></div>
+      <div class="field"><label>Mot de passe</label><input type="text" id="newUserPassword" placeholder="Mot de passe temporaire"></div>
+      <div class="field"><label>Rôle</label>
+        <select id="newUserRole">
+          <option value="salarie">Salarié (opère, pas de CA)</option>
+          <option value="direction">Direction (accès complet)</option>
+        </select>
+      </div>
+      <div class="err" id="addUserErr" style="display:none;"></div>
+      <div class="modal-actions"><button class="btn primary" id="confirmAddUserBtn">Créer le compte</button></div>
+    </div>
+    <div class="sub" style="margin-top:8px;">Connexions récentes</div>
+    <div class="journal-list" style="max-height:180px;">${loginsRows}</div>
+    <div class="modal-actions"><button class="btn" id="closeUsersBtn">Fermer</button></div>
+  `;
+
+  document.getElementById("closeUsersBtn").onclick = closeModal;
+  document.getElementById("showAddUserBtn").onclick = () => { document.getElementById("addUserForm").style.display = "block"; };
+
+  body.querySelectorAll(".del").forEach(btn => {
+    btn.onclick = async () => {
+      if(btn.dataset.username === currentUser.username){ alert("Vous ne pouvez pas supprimer votre propre compte."); return; }
+      if(!confirm(`Supprimer le compte "${btn.dataset.username}" ?`)) return;
+      try{
+        const res = await fetch("/api/auth", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ action:"deleteUser", token: sessionToken, username: btn.dataset.username }) });
+        if(!res.ok){ const j = await res.json().catch(()=>({})); alert(j.error === "cannot delete last direction account" ? "Impossible de supprimer le dernier compte Direction." : "Erreur lors de la suppression."); return; }
+        await renderUsersModal();
+      }catch(e){ alert("Connexion au serveur impossible."); }
+    };
+  });
+
+  document.getElementById("confirmAddUserBtn").onclick = async () => {
+    const name = document.getElementById("newUserName").value.trim();
+    const username = document.getElementById("newUserUsername").value.trim();
+    const password = document.getElementById("newUserPassword").value;
+    const role = document.getElementById("newUserRole").value;
+    const errEl = document.getElementById("addUserErr");
+    errEl.style.display = "none";
+    if(!name || !username || !password){ errEl.textContent = "Merci de remplir tous les champs."; errEl.style.display = "block"; return; }
+    try{
+      const res = await fetch("/api/auth", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ action:"createUser", token: sessionToken, name, username, password, role }) });
+      if(res.status === 409){ errEl.textContent = "Cet identifiant existe déjà."; errEl.style.display = "block"; return; }
+      if(!res.ok){ errEl.textContent = "Erreur lors de la création."; errEl.style.display = "block"; return; }
+      await renderUsersModal();
+    }catch(e){ errEl.textContent = "Connexion au serveur impossible."; errEl.style.display = "block"; }
+  };
 }
 
 /* ---------- licence / accès (vérifié côté serveur, code jamais exposé) ---------- */
@@ -860,14 +1047,20 @@ function buildCAReport(period){
   const {start,end,label} = computePeriodRange(period);
   const entries = history.filter(h => h.action==='entrée' && typeof h.price === 'number' && new Date(h.time)>=start && new Date(h.time)<end);
   const byCategory = {};
+  const byOperator = {};
   let total = 0;
   entries.forEach(e=>{
     const catLabel = e.categoryLabel || 'Non catégorisé';
     if(!byCategory[catLabel]) byCategory[catLabel] = {count:0, sum:0};
     byCategory[catLabel].count++; byCategory[catLabel].sum += e.price;
+
+    const opLabel = e.operator || 'Non renseigné';
+    if(!byOperator[opLabel]) byOperator[opLabel] = {count:0, sum:0};
+    byOperator[opLabel].count++; byOperator[opLabel].sum += e.price;
+
     total += e.price;
   });
-  return { entries, byCategory, total, count: entries.length, label };
+  return { entries, byCategory, byOperator, total, count: entries.length, label };
 }
 
 function openCAModal(period){
@@ -887,6 +1080,10 @@ function renderCAModal(period){
   let rowsHTML = Object.entries(report.byCategory).map(([cat,d])=>`<tr><td>${escapeHTML(cat)}</td><td>${d.count}</td><td>${d.sum.toFixed(2)} €</td></tr>`).join("");
   if(!rowsHTML) rowsHTML = `<tr><td colspan="3" style="color:var(--text-faint)">Aucun passage sur cette période.</td></tr>`;
 
+  const opEntries = Object.entries(report.byOperator).sort((a,b) => b[1].sum - a[1].sum);
+  let opRowsHTML = opEntries.map(([op,d])=>`<tr><td>${escapeHTML(op)}</td><td>${d.count}</td><td>${d.sum.toFixed(2)} €</td></tr>`).join("");
+  if(!opRowsHTML) opRowsHTML = `<tr><td colspan="3" style="color:var(--text-faint)">Aucun passage sur cette période.</td></tr>`;
+
   body.innerHTML = `
     <h3>Synthèse CA — ${report.label}</h3>
     <div class="sub">${tariffTiers.length} palier${tariffTiers.length>1?'s':''} tarifaire${tariffTiers.length>1?'s':''} défini${tariffTiers.length>1?'s':''}</div>
@@ -898,6 +1095,11 @@ function renderCAModal(period){
     <table class="ca-table">
       <thead><tr><th>Catégorie</th><th>Passages</th><th>CA</th></tr></thead>
       <tbody>${rowsHTML}<tr class="total-row"><td>TOTAL</td><td>${report.count}</td><td>${report.total.toFixed(2)} €</td></tr></tbody>
+    </table>
+    <div class="sub" style="margin-top:18px;">Par opérateur</div>
+    <table class="ca-table">
+      <thead><tr><th>Opérateur</th><th>Passages</th><th>CA généré</th></tr></thead>
+      <tbody>${opRowsHTML}</tbody>
     </table>
     <div class="modal-actions">
       <button class="btn" id="closeCA">Fermer</button>
@@ -1184,7 +1386,8 @@ async function confirmOccupy(id){
   await saveState(updated);
   await pushHistory({
     spotId:id, plate:plateVal.toUpperCase(), frigo:frigoVal, action:"entrée", time:new Date().toISOString(),
-    category: catVal || null, categoryLabel: cat ? cat.label : null, price
+    category: catVal || null, categoryLabel: cat ? cat.label : null, price,
+    operator: currentUser ? currentUser.name : null
   });
   if(resvVal){
     const key = todayKey();
@@ -1224,7 +1427,7 @@ async function quickExtend(id){
 function tickClock(){ document.getElementById("clock").textContent = new Date().toLocaleTimeString("fr-FR"); }
 
 async function pollRemote(){
-  if(modalOpen || releaseMode) return;
+  if(modalOpen || releaseMode || !currentUser || license.blocked) return;
   const remoteSlots = await loadKey(SLOTS_KEY, null);
   const remoteState = await loadKey(STATE_KEY, null);
   const remoteHist = await loadKey(HISTORY_KEY, null);
@@ -1298,7 +1501,17 @@ async function init(){
   setInterval(pollRemote, POLL_MS);
 
   if(license.blocked) return; // le polling reste actif pour détecter un futur déblocage
-  await loadAllData();
+
+  if(sessionToken){
+    const me = await fetchMe(sessionToken);
+    if(me){
+      currentUser = me;
+      applyUserUI();
+      await loadAllData();
+      return;
+    }
+  }
+  showLoginScreen();
 }
 
 init();
