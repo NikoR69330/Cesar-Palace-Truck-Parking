@@ -216,6 +216,7 @@
     </div>
     <div class="err" id="loginErr" style="display:none;">Identifiant ou mot de passe incorrect.</div>
     <button id="loginSubmitBtn" style="width:100%; background:var(--amber); color:#1a1400; border:none; border-radius:8px; padding:11px; font-weight:700; cursor:pointer; font-family:var(--sans); font-size:13px;">Se connecter</button>
+    <span class="admin-link" id="loginAdminBtn" style="display:block; margin-top:16px;">Administration</span>
   </div>
 </div>
 <div class="wrap">
@@ -631,6 +632,7 @@ function applyLockState(){
 
 document.getElementById("lockAdminBtn").onclick = () => openAdminModal();
 document.getElementById("footerAdminBtn").onclick = () => openAdminModal();
+document.getElementById("loginAdminBtn").onclick = () => openAdminModal();
 
 function openAdminModal(){
   modalOpen = true;
