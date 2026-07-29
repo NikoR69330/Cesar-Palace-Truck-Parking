@@ -293,7 +293,7 @@
   </div>
 
   <div class="controls">
-    <input class="search" id="searchInput" placeholder="Rechercher une plaque d'immatriculation…">
+    <input class="search" id="searchInput" placeholder="Rechercher une plaque ou un numéro de place…">
     <div class="zones" id="zoneButtons"></div>
   </div>
 
@@ -786,7 +786,11 @@ function renderGrid(){
     if(!s) return false;
     if(currentZone==="FRIGO" && !isFrigoZone(id)) return false;
     if(currentZone==="STD" && isFrigoZone(id)) return false;
-    if(q && !(s.plate && s.plate.toUpperCase().includes(q))) return false;
+    if(q){
+      const plateMatch = s.plate && s.plate.toUpperCase().includes(q);
+      const idMatch = String(id).toUpperCase().includes(q);
+      if(!plateMatch && !idMatch) return false;
+    }
     return true;
   });
   if(filtered.length===0){ grid.innerHTML = '<div class="empty-msg">Aucune place ne correspond.</div>'; return; }
