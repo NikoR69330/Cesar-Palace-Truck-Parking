@@ -79,6 +79,16 @@
 
   <div class="sync" id="syncLabel">…</div>
 
+  <div class="card" id="checkCard">
+    <h3 id="txtCheckTitle" style="margin:0 0 4px 0; font-size:16px;">🔍 Vérifier ma réservation</h3>
+    <p id="txtCheckDesc" style="font-size:12px; color:var(--text-dim); margin:0 0 16px 0;"></p>
+    <div style="display:flex; gap:8px;">
+      <input id="checkPlateInput" placeholder="AB-123-CD" style="margin-bottom:0; flex:1;">
+      <button class="btn" id="checkBtn" style="width:auto; margin-top:0; padding:12px 18px; white-space:nowrap;">Vérifier</button>
+    </div>
+    <div id="checkResult" style="margin-top:12px;"></div>
+  </div>
+
   <div class="card" id="reserveCard">
     <h3 id="txtReserveTitle" style="margin:0 0 4px 0; font-size:16px;">📋 Demander une place</h3>
     <p id="txtReserveDesc" style="font-size:12px; color:var(--text-dim); margin:0 0 16px 0;"></p>
@@ -144,7 +154,8 @@ const T = {
     footnote:"Les disponibilités se mettent à jour automatiquement.",
     loading:"chargement…", updatedAt:(t)=>`mis à jour à ${t}`, unavailable:"indisponible pour le moment",
     freeCount:(n)=>`${n} libre(s)`,
-    fullTitle:"🚫 PARKING COMPLET", fullDesc:"Aucune place disponible pour le moment. Merci de réessayer plus tard."
+    fullTitle:"🚫 PARKING COMPLET", fullDesc:"Aucune place disponible pour le moment. Merci de réessayer plus tard.",
+    checkTitle:"🔍 Vérifier ma réservation", checkDesc:"Entrez votre plaque pour voir si l'équipe a déjà noté une réservation pour vous.", checkBtn:"Vérifier", checkChecking:"Recherche…", checkFoundPending:(dt,tm)=>`✅ Réservation trouvée pour le ${dt} à ${tm}. L'équipe vous attend.`, checkFoundArrived:"✅ Vous êtes déjà enregistré comme arrivé sur le parking.", checkNotFound:"Aucune réservation trouvée pour cette plaque. Vous pouvez en faire la demande ci-dessous.", checkEmpty:"Merci de saisir une plaque."
   },
   en:{
     title:"🚛 Live availability", occupation:"Occupancy rate",
@@ -162,7 +173,8 @@ const T = {
     footnote:"Availability updates automatically.",
     loading:"loading…", updatedAt:(t)=>`updated at ${t}`, unavailable:"temporarily unavailable",
     freeCount:(n)=>`${n} free`,
-    fullTitle:"🚫 PARKING FULL", fullDesc:"No spots available at the moment. Please try again later."
+    fullTitle:"🚫 PARKING FULL", fullDesc:"No spots available at the moment. Please try again later.",
+    checkTitle:"🔍 Check my reservation", checkDesc:"Enter your plate to see if the team already has a reservation noted for you.", checkBtn:"Check", checkChecking:"Searching…", checkFoundPending:(dt,tm)=>`✅ Reservation found for ${dt} at ${tm}. The team is expecting you.`, checkFoundArrived:"✅ You are already registered as arrived at the parking.", checkNotFound:"No reservation found for this plate. You can request one below.", checkEmpty:"Please enter a plate."
   },
   es:{
     title:"🚛 Disponibilidad en directo", occupation:"Tasa de ocupación",
@@ -180,7 +192,8 @@ const T = {
     footnote:"La disponibilidad se actualiza automáticamente.",
     loading:"cargando…", updatedAt:(t)=>`actualizado a las ${t}`, unavailable:"no disponible por el momento",
     freeCount:(n)=>`${n} libre(s)`,
-    fullTitle:"🚫 PARKING COMPLETO", fullDesc:"No hay plazas disponibles en este momento. Vuelva a intentarlo más tarde."
+    fullTitle:"🚫 PARKING COMPLETO", fullDesc:"No hay plazas disponibles en este momento. Vuelva a intentarlo más tarde.",
+    checkTitle:"🔍 Comprobar mi reserva", checkDesc:"Introduzca su matrícula para ver si el equipo ya tiene una reserva anotada para usted.", checkBtn:"Comprobar", checkChecking:"Buscando…", checkFoundPending:(dt,tm)=>`✅ Reserva encontrada para el ${dt} a las ${tm}. El equipo le espera.`, checkFoundArrived:"✅ Ya está registrado como llegado al parking.", checkNotFound:"No se encontró ninguna reserva para esta matrícula. Puede solicitarla más abajo.", checkEmpty:"Por favor, introduzca una matrícula."
   },
   it:{
     title:"🚛 Disponibilità in tempo reale", occupation:"Tasso di occupazione",
@@ -198,7 +211,8 @@ const T = {
     footnote:"La disponibilità si aggiorna automaticamente.",
     loading:"caricamento…", updatedAt:(t)=>`aggiornato alle ${t}`, unavailable:"temporaneamente non disponibile",
     freeCount:(n)=>`${n} libero/i`,
-    fullTitle:"🚫 PARCHEGGIO PIENO", fullDesc:"Nessun posto disponibile al momento. Riprova più tardi."
+    fullTitle:"🚫 PARCHEGGIO PIENO", fullDesc:"Nessun posto disponibile al momento. Riprova più tardi.",
+    checkTitle:"🔍 Verifica la mia prenotazione", checkDesc:"Inserisci la targa per vedere se il team ha già registrato una prenotazione per te.", checkBtn:"Verifica", checkChecking:"Ricerca…", checkFoundPending:(dt,tm)=>`✅ Prenotazione trovata per il ${dt} alle ${tm}. Il team ti aspetta.`, checkFoundArrived:"✅ Sei già registrato come arrivato al parcheggio.", checkNotFound:"Nessuna prenotazione trovata per questa targa. Puoi richiederla qui sotto.", checkEmpty:"Inserisci una targa."
   },
   de:{
     title:"🚛 Verfügbarkeit live", occupation:"Belegungsrate",
@@ -216,7 +230,8 @@ const T = {
     footnote:"Die Verfügbarkeit wird automatisch aktualisiert.",
     loading:"lädt…", updatedAt:(t)=>`aktualisiert um ${t}`, unavailable:"momentan nicht verfügbar",
     freeCount:(n)=>`${n} frei`,
-    fullTitle:"🚫 PARKPLATZ VOLL", fullDesc:"Derzeit keine Plätze verfügbar. Bitte versuchen Sie es später erneut."
+    fullTitle:"🚫 PARKPLATZ VOLL", fullDesc:"Derzeit keine Plätze verfügbar. Bitte versuchen Sie es später erneut.",
+    checkTitle:"🔍 Meine Reservierung prüfen", checkDesc:"Geben Sie Ihr Kennzeichen ein, um zu sehen, ob das Team bereits eine Reservierung für Sie vermerkt hat.", checkBtn:"Prüfen", checkChecking:"Suche…", checkFoundPending:(dt,tm)=>`✅ Reservierung gefunden für ${dt} um ${tm}. Das Team erwartet Sie.`, checkFoundArrived:"✅ Sie sind bereits als angekommen am Parkplatz registriert.", checkNotFound:"Keine Reservierung für dieses Kennzeichen gefunden. Sie können unten eine Anfrage stellen.", checkEmpty:"Bitte geben Sie ein Kennzeichen ein."
   },
   lt:{
     title:"🚛 Laisvos vietos tiesiogiai", occupation:"Užimtumo lygis",
@@ -234,7 +249,8 @@ const T = {
     footnote:"Laisvos vietos atnaujinamos automatiškai.",
     loading:"kraunama…", updatedAt:(t)=>`atnaujinta ${t}`, unavailable:"laikinai neprieinama",
     freeCount:(n)=>`${n} laisva(-os)`,
-    fullTitle:"🚫 AIKŠTELĖ PILNA", fullDesc:"Šiuo metu nėra laisvų vietų. Bandykite vėliau."
+    fullTitle:"🚫 AIKŠTELĖ PILNA", fullDesc:"Šiuo metu nėra laisvų vietų. Bandykite vėliau.",
+    checkTitle:"🔍 Patikrinti mano rezervaciją", checkDesc:"Įveskite valstybinį numerį, kad sužinotumėte, ar komanda jau turi jums rezervaciją.", checkBtn:"Tikrinti", checkChecking:"Ieškoma…", checkFoundPending:(dt,tm)=>`✅ Rezervacija rasta ${dt} ${tm}. Komanda jūsų laukia.`, checkFoundArrived:"✅ Jūs jau užregistruotas kaip atvykęs į aikštelę.", checkNotFound:"Rezervacija šiam numeriui nerasta. Galite pateikti prašymą žemiau.", checkEmpty:"Prašome įvesti numerį."
   },
   ru:{
     title:"🚛 Наличие мест онлайн", occupation:"Уровень загруженности",
@@ -252,7 +268,8 @@ const T = {
     footnote:"Наличие мест обновляется автоматически.",
     loading:"загрузка…", updatedAt:(t)=>`обновлено в ${t}`, unavailable:"временно недоступно",
     freeCount:(n)=>`${n} свободно`,
-    fullTitle:"🚫 ПАРКОВКА ЗАПОЛНЕНА", fullDesc:"В данный момент мест нет. Пожалуйста, попробуйте позже."
+    fullTitle:"🚫 ПАРКОВКА ЗАПОЛНЕНА", fullDesc:"В данный момент мест нет. Пожалуйста, попробуйте позже.",
+    checkTitle:"🔍 Проверить мою бронь", checkDesc:"Введите номер, чтобы узнать, есть ли у команды бронь для вас.", checkBtn:"Проверить", checkChecking:"Поиск…", checkFoundPending:(dt,tm)=>`✅ Бронь найдена на ${dt} в ${tm}. Команда вас ждёт.`, checkFoundArrived:"✅ Вы уже зарегистрированы как прибывший на парковку.", checkNotFound:"Бронь для этого номера не найдена. Вы можете подать запрос ниже.", checkEmpty:"Пожалуйста, введите номер."
   },
   uk:{
     title:"🚛 Наявність місць онлайн", occupation:"Рівень завантаженості",
@@ -270,7 +287,8 @@ const T = {
     footnote:"Наявність місць оновлюється автоматично.",
     loading:"завантаження…", updatedAt:(t)=>`оновлено о ${t}`, unavailable:"тимчасово недоступно",
     freeCount:(n)=>`${n} вільно`,
-    fullTitle:"🚫 ПАРКІНГ ЗАПОВНЕНО", fullDesc:"Наразі немає вільних місць. Спробуйте пізніше."
+    fullTitle:"🚫 ПАРКІНГ ЗАПОВНЕНО", fullDesc:"Наразі немає вільних місць. Спробуйте пізніше.",
+    checkTitle:"🔍 Перевірити мою бронь", checkDesc:"Введіть номер, щоб дізнатися, чи є у команди бронь для вас.", checkBtn:"Перевірити", checkChecking:"Пошук…", checkFoundPending:(dt,tm)=>`✅ Бронь знайдено на ${dt} о ${tm}. Команда на вас чекає.`, checkFoundArrived:"✅ Ви вже зареєстровані як прибулий на паркінг.", checkNotFound:"Бронь для цього номера не знайдено. Ви можете подати запит нижче.", checkEmpty:"Будь ласка, введіть номер."
   },
   pl:{
     title:"🚛 Dostępność na żywo", occupation:"Poziom obłożenia",
@@ -288,7 +306,8 @@ const T = {
     footnote:"Dostępność aktualizuje się automatycznie.",
     loading:"ładowanie…", updatedAt:(t)=>`zaktualizowano o ${t}`, unavailable:"chwilowo niedostępne",
     freeCount:(n)=>`${n} wolne`,
-    fullTitle:"🚫 PARKING PEŁNY", fullDesc:"Obecnie brak wolnych miejsc. Spróbuj ponownie później."
+    fullTitle:"🚫 PARKING PEŁNY", fullDesc:"Obecnie brak wolnych miejsc. Spróbuj ponownie później.",
+    checkTitle:"🔍 Sprawdź moją rezerwację", checkDesc:"Wpisz numer rejestracyjny, aby sprawdzić, czy zespół ma już dla Ciebie rezerwację.", checkBtn:"Sprawdź", checkChecking:"Szukanie…", checkFoundPending:(dt,tm)=>`✅ Znaleziono rezerwację na ${dt} o ${tm}. Zespół na Ciebie czeka.`, checkFoundArrived:"✅ Jesteś już zarejestrowany jako przybyły na parking.", checkNotFound:"Nie znaleziono rezerwacji dla tego numeru. Możesz złożyć prośbę poniżej.", checkEmpty:"Proszę podać numer rejestracyjny."
   },
   ro:{
     title:"🚛 Disponibilitate live", occupation:"Grad de ocupare",
@@ -306,7 +325,8 @@ const T = {
     footnote:"Disponibilitatea se actualizează automat.",
     loading:"se încarcă…", updatedAt:(t)=>`actualizat la ${t}`, unavailable:"temporar indisponibil",
     freeCount:(n)=>`${n} liber(e)`,
-    fullTitle:"🚫 PARCARE COMPLETĂ", fullDesc:"Momentan nu sunt locuri disponibile. Încercați din nou mai târziu."
+    fullTitle:"🚫 PARCARE COMPLETĂ", fullDesc:"Momentan nu sunt locuri disponibile. Încercați din nou mai târziu.",
+    checkTitle:"🔍 Verifică rezervarea mea", checkDesc:"Introduceți numărul de înmatriculare pentru a vedea dacă echipa are deja o rezervare pentru dvs.", checkBtn:"Verifică", checkChecking:"Se caută…", checkFoundPending:(dt,tm)=>`✅ Rezervare găsită pentru ${dt} la ${tm}. Echipa vă așteaptă.`, checkFoundArrived:"✅ Sunteți deja înregistrat ca sosit la parcare.", checkNotFound:"Nu s-a găsit nicio rezervare pentru acest număr. Puteți trimite o cerere mai jos.", checkEmpty:"Vă rugăm introduceți un număr de înmatriculare."
   }
 };
 
@@ -343,7 +363,11 @@ function applyLang(lang){
   setText('txtLabelNote', t.labelNote);
   setText('txtFullTitle', t.fullTitle);
   setText('txtFullDesc', t.fullDesc);
+  setText('txtCheckTitle', t.checkTitle);
+  setText('txtCheckDesc', t.checkDesc);
   setText('txtFootnote', t.footnote);
+  const checkBtnEl = document.getElementById('checkBtn');
+  if(checkBtnEl) checkBtnEl.textContent = t.checkBtn;
   const noteEl = document.getElementById('noteInput');
   if(noteEl) noteEl.placeholder = t.notePlaceholder;
   const submitEl = document.getElementById('submitBtn');
@@ -477,6 +501,39 @@ function attachSubmitHandler(){
   };
 }
 attachSubmitHandler();
+
+document.getElementById('checkBtn').onclick = async () => {
+  const t = T[currentLang];
+  const plate = document.getElementById('checkPlateInput').value.trim().toUpperCase();
+  const resultEl = document.getElementById('checkResult');
+  if(!plate){
+    resultEl.innerHTML = `<div class="err" style="display:block;">${t.checkEmpty}</div>`;
+    return;
+  }
+  const btn = document.getElementById('checkBtn');
+  btn.disabled = true; btn.textContent = t.checkChecking;
+  resultEl.innerHTML = '';
+  try{
+    const prebookings = await loadKey('prebookings', []);
+    const matches = prebookings.filter(p => p.plate === plate && p.status !== 'cancelled');
+    matches.sort((a,b) => new Date(b.date) - new Date(a.date));
+    const match = matches[0];
+    if(match){
+      const dateStr = new Date(match.date).toLocaleDateString(currentLang);
+      const msg = match.status === 'arrived'
+        ? t.checkFoundArrived
+        : t.checkFoundPending(dateStr, match.time || '');
+      resultEl.innerHTML = `<div style="background:rgba(53,196,122,0.1); border:1px solid var(--green); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--green);">${msg}</div>`;
+    }else{
+      resultEl.innerHTML = `<div style="background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--text-dim);">${t.checkNotFound}</div>`;
+    }
+  }catch(e){
+    resultEl.innerHTML = `<div class="err" style="display:block;">${t.errNetwork}</div>`;
+  }finally{
+    btn.disabled = false; btn.textContent = t.checkBtn;
+  }
+};
+document.getElementById('checkPlateInput').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('checkBtn').click(); });
 
 applyLang(detectLang());
 tickClock();
