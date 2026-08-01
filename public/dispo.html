@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Disponibilités — Cesar Palace Truck Parking</title>
+<style>
+  :root{
+    --bg:#14171a; --panel:#1c2024; --panel-2:#22262b; --line:#2a2f34;
+    --text:#eae7e1; --text-dim:#8b9298; --text-faint:#5a6067;
+    --amber:#00D4FF; --green:#35c47a; --red:#e8483c; --blue:#4aa3e0;
+    --sans: -apple-system, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:16px;}
+  .wrap{max-width:480px;margin:0 auto;padding-bottom:40px;}
+  header{text-align:center;margin-bottom:20px;padding-top:8px;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:6px;}
+  h1{margin:0;font-size:20px;font-weight:800;}
+  .clock{font-family:var(--mono);font-size:12px;color:var(--text-dim);margin-top:6px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;}
+
+  .gauge-wrap{text-align:center;margin-bottom:10px;}
+  .gauge-pct{font-family:var(--mono);font-size:44px;font-weight:800;color:var(--amber);}
+  .gauge-lbl{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;}
+  .gauge-track{display:flex;gap:2px;height:16px;margin-top:14px;}
+  .seg{flex:1;background:var(--panel-2);border-radius:2px;}
+  .seg.on{background:var(--seg-color, var(--green));}
+
+  .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center;}
+  .stat .num{font-family:var(--mono);font-size:26px;font-weight:800;}
+  .stat .num.free{color:var(--green);}
+  .stat .num.occ{color:var(--red);}
+  .stat .lbl{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;}
+
+  .zone-row{display:flex;justify-content:space-between;font-size:13px;color:var(--text-dim);margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .zone-row b{color:var(--text);}
+
+  .btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;background:var(--amber);color:#00232b;margin-top:4px;}
+  .btn:hover{filter:brightness(1.08);}
+
+  label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;font-weight:600;}
+  input, textarea{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:12px;font-size:15px;margin-bottom:14px;font-family:var(--sans);
+  }
+  textarea{min-height:60px;resize:vertical;}
+  input:focus, textarea:focus{outline:none;border-color:var(--amber);}
+
+  .success-box{text-align:center;padding:20px 10px;}
+  .success-box .icon{font-size:40px;margin-bottom:10px;}
+  .success-box h3{margin:0 0 6px 0;font-size:17px;}
+  .success-box p{color:var(--text-dim);font-size:13px;}
+
+  .footnote{font-size:11px;color:var(--text-faint);text-align:center;margin-top:10px;}
+  .sync{font-size:11px;color:var(--text-faint);text-align:center;margin-bottom:16px;}
+  .err{color:var(--red);font-size:12px;margin-top:-8px;margin-bottom:10px;display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Cesar Palace Truck Parking</div>
+    <h1>🚛 Disponibilités en direct</h1>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <div class="sync" id="syncLabel">chargement…</div>
+
+  <div class="card">
+    <div class="gauge-wrap">
+      <div class="gauge-pct" id="gaugePct">—</div>
+      <div class="gauge-lbl">Taux d'occupation</div>
+    </div>
+    <div class="gauge-track" id="gaugeTrack"></div>
+    <div class="stats-row">
+      <div class="stat"><div class="num free" id="statFree">—</div><div class="lbl">Places libres</div></div>
+      <div class="stat"><div class="num occ" id="statOcc">—</div><div class="lbl">Occupées</div></div>
+    </div>
+    <div class="zone-row"><span>Zone frigo</span><b id="zoneFrigo">—</b></div>
+    <div class="zone-row"><span>Zone standard</span><b id="zoneStd">—</b></div>
+  </div>
+
+  <div class="card" id="reserveCard">
+    <h3 style="margin:0 0 4px 0; font-size:16px;">📋 Demander une place</h3>
+    <p style="font-size:12px; color:var(--text-dim); margin:0 0 16px 0;">
+      Votre demande sera transmise à l'équipe du parking. Elle n'est pas confirmée automatiquement — vous serez recontacté si besoin.
+    </p>
+    <div id="reserveForm">
+      <label>Immatriculation</label>
+      <input id="plateInput" placeholder="AB-123-CD">
+      <label>Date et heure d'arrivée prévues</label>
+      <input id="whenInput" type="datetime-local">
+      <label>Contact (téléphone)</label>
+      <input id="phoneInput" placeholder="06 12 34 56 78">
+      <label>Note (facultatif)</label>
+      <textarea id="noteInput" placeholder="Ex: camion frigo, besoin de 72h…"></textarea>
+      <div class="err" id="formErr">Merci de renseigner au moins la plaque et un contact.</div>
+      <button class="btn" id="submitBtn">Envoyer la demande</button>
+    </div>
+  </div>
+
+  <div class="footnote">Les disponibilités se mettent à jour automatiquement.</div>
+</div>
+
+<script>
+const REQUESTS_KEY = 'requests';
+
+function isFrigoZone(id){ const n = parseInt(id, 10); return String(n) === id && n >= 1 && n <= 22; }
+
+async function loadKey(type, fallback){
+  try{
+    const res = await fetch(`/api/data?type=${type}`);
+    if(!res.ok) return fallback;
+    const data = await res.json();
+    return (data.value === null || data.value === undefined) ? fallback : data.value;
+  }catch(e){ return fallback; }
+}
+async function saveKey(type, value){
+  try{
+    const res = await fetch(`/api/data?type=${type}`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({value})
+    });
+    return res.ok;
+  }catch(e){ return false; }
+}
+
+function tickClock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR'); }
+
+async function refresh(){
+  const slots = await loadKey('slots', []);
+  const state = await loadKey('state', {});
+  const list = slots.map(id => state[id]).filter(Boolean);
+  if(list.length === 0){
+    document.getElementById('syncLabel').textContent = 'indisponible pour le moment';
+    return;
+  }
+  const occ = list.filter(s => s.status === 'occupied').length;
+  const free = list.length - occ;
+  const pct = Math.round((occ / list.length) * 100);
+
+  document.getElementById('statFree').textContent = free;
+  document.getElementById('statOcc').textContent = occ;
+  document.getElementById('gaugePct').textContent = pct + '%';
+  document.getElementById('syncLabel').textContent = 'mis à jour à ' + new Date().toLocaleTimeString('fr-FR');
+
+  const frigoIds = slots.filter(isFrigoZone);
+  const frigoOcc = frigoIds.filter(id => state[id] && state[id].status === 'occupied').length;
+  document.getElementById('zoneFrigo').textContent = `${frigoIds.length - frigoOcc} libre(s) / ${frigoIds.length}`;
+
+  const stdIds = slots.filter(id => !isFrigoZone(id));
+  const stdOcc = stdIds.filter(id => state[id] && state[id].status === 'occupied').length;
+  document.getElementById('zoneStd').textContent = `${stdIds.length - stdOcc} libre(s) / ${stdIds.length}`;
+
+  const track = document.getElementById('gaugeTrack');
+  track.innerHTML = '';
+  const segCount = 36;
+  const filled = Math.round((pct/100) * segCount);
+  let color = 'var(--green)';
+  if(pct >= 90) color = 'var(--red)'; else if(pct >= 70) color = 'var(--amber)';
+  for(let i=0;i<segCount;i++){
+    const seg = document.createElement('div');
+    seg.className = 'seg' + (i<filled ? ' on' : '');
+    if(i<filled) seg.style.setProperty('--seg-color', color);
+    track.appendChild(seg);
+  }
+}
+
+document.getElementById('submitBtn').onclick = async () => {
+  const plate = document.getElementById('plateInput').value.trim();
+  const when = document.getElementById('whenInput').value;
+  const phone = document.getElementById('phoneInput').value.trim();
+  const note = document.getElementById('noteInput').value.trim();
+  const errEl = document.getElementById('formErr');
+  errEl.style.display = 'none';
+  if(!plate || !phone){
+    errEl.textContent = 'Merci de renseigner au moins la plaque et un contact.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Envoi…';
+  try{
+    const existing = await loadKey(REQUESTS_KEY, []);
+    const updated = [...existing, {
+      id: 'req_' + Date.now(),
+      plate: plate.toUpperCase(),
+      when: when || null,
+      phone,
+      note,
+      submittedAt: new Date().toISOString(),
+      seen: false
+    }];
+    const ok = await saveKey(REQUESTS_KEY, updated);
+    if(!ok) throw new Error('save failed');
+    document.getElementById('reserveCard').innerHTML = `
+      <div class="success-box">
+        <div class="icon">✅</div>
+        <h3>Demande envoyée</h3>
+        <p>L'équipe du parking a bien reçu votre demande pour <b>${plate.toUpperCase()}</b>. Vous serez recontacté si besoin.</p>
+      </div>`;
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Envoyer la demande';
+    errEl.textContent = "Impossible d'envoyer la demande. Vérifiez votre connexion et réessayez.";
+    errEl.style.display = 'block';
+  }
+};
+
+tickClock();
+setInterval(tickClock, 1000);
+refresh();
+setInterval(refresh, 8000);
+</script>
+</body>
+</html>
