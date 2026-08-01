@@ -18,7 +18,8 @@
   .wrap{max-width:480px;margin:0 auto;padding-bottom:40px;}
 
   .lang-bar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;}
-  .lang-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);border-radius:7px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;}
+  .lang-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);border-radius:7px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .lang-btn svg{border-radius:2px;flex-shrink:0;display:block;}
   .lang-btn.active{background:var(--amber);color:#00232b;border-color:var(--amber);}
 
   header{text-align:center;margin-bottom:20px;padding-top:8px;}
@@ -114,17 +115,30 @@
 
 <script>
 /* ---------- traductions ---------- */
+const SVG_FLAGS = {
+  fr: `<svg viewBox="0 0 3 2" width="20" height="14"><rect width="1" height="2" fill="#0055A4"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#EF4135"/></svg>`,
+  en: `<svg viewBox="0 0 60 36" width="20" height="14"><rect width="60" height="36" fill="#012169"/><path d="M0,0 60,36 M60,0 0,36" stroke="#fff" stroke-width="7"/><path d="M0,0 60,36 M60,0 0,36" stroke="#C8102E" stroke-width="3"/><path d="M30,0 30,36 M0,18 60,18" stroke="#fff" stroke-width="10"/><path d="M30,0 30,36 M0,18 60,18" stroke="#C8102E" stroke-width="5"/></svg>`,
+  es: `<svg viewBox="0 0 3 2" width="20" height="14"><rect width="3" height="2" fill="#AA151B"/><rect y="0.5" width="3" height="1" fill="#F1BF00"/></svg>`,
+  it: `<svg viewBox="0 0 3 2" width="20" height="14"><rect width="1" height="2" fill="#009246"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#CE2B37"/></svg>`,
+  de: `<svg viewBox="0 0 5 3" width="20" height="14"><rect width="5" height="1" fill="#000"/><rect y="1" width="5" height="1" fill="#DD0000"/><rect y="2" width="5" height="1" fill="#FFCE00"/></svg>`,
+  lt: `<svg viewBox="0 0 5 3" width="20" height="14"><rect width="5" height="1" fill="#FDB913"/><rect y="1" width="5" height="1" fill="#006A44"/><rect y="2" width="5" height="1" fill="#C1272D"/></svg>`,
+  ru: `<svg viewBox="0 0 3 2" width="20" height="14"><rect width="3" height="0.667" fill="#fff"/><rect y="0.667" width="3" height="0.667" fill="#0039A6"/><rect y="1.333" width="3" height="0.667" fill="#D52B1E"/></svg>`,
+  uk: `<svg viewBox="0 0 3 2" width="20" height="14"><rect width="3" height="1" fill="#0057B7"/><rect y="1" width="3" height="1" fill="#FFD700"/></svg>`,
+  pl: `<svg viewBox="0 0 8 5" width="20" height="14"><rect width="8" height="2.5" fill="#fff"/><rect y="2.5" width="8" height="2.5" fill="#DC143C"/></svg>`,
+  ro: `<svg viewBox="0 0 3 2" width="20" height="14"><rect width="1" height="2" fill="#002B7F"/><rect x="1" width="1" height="2" fill="#FCD116"/><rect x="2" width="1" height="2" fill="#CE1126"/></svg>`,
+};
+
 const LANGS = [
-  { code:'fr', flag:'🇫🇷', label:'FR' },
-  { code:'en', flag:'🇬🇧', label:'EN' },
-  { code:'es', flag:'🇪🇸', label:'ES' },
-  { code:'it', flag:'🇮🇹', label:'IT' },
-  { code:'de', flag:'🇩🇪', label:'DE' },
-  { code:'lt', flag:'🇱🇹', label:'LT' },
-  { code:'ru', flag:'🇷🇺', label:'RU' },
-  { code:'uk', flag:'🇺🇦', label:'UA' },
-  { code:'pl', flag:'🇵🇱', label:'PL' },
-  { code:'ro', flag:'🇷🇴', label:'RO' },
+  { code:'fr', label:'FR' },
+  { code:'en', label:'EN' },
+  { code:'es', label:'ES' },
+  { code:'it', label:'IT' },
+  { code:'de', label:'DE' },
+  { code:'lt', label:'LT' },
+  { code:'ru', label:'RU' },
+  { code:'uk', label:'UA' },
+  { code:'pl', label:'PL' },
+  { code:'ro', label:'RO' },
 ];
 
 const T = {
@@ -336,7 +350,7 @@ function applyLang(lang){
 function renderLangBar(){
   const bar = document.getElementById('langBar');
   bar.innerHTML = LANGS.map(l =>
-    `<button class="lang-btn ${l.code===currentLang?'active':''}" data-lang="${l.code}">${l.flag} ${l.label}</button>`
+    `<button class="lang-btn ${l.code===currentLang?'active':''}" data-lang="${l.code}">${SVG_FLAGS[l.code]}<span>${l.label}</span></button>`
   ).join('');
   bar.querySelectorAll('[data-lang]').forEach(btn=>{
     btn.onclick = () => applyLang(btn.dataset.lang);
