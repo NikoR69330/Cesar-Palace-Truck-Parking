@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Code — Booking</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:#f0f4f8; color:#111;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .card{
+    background:#fff; border-radius:20px; padding:48px 56px;
+    text-align:center; box-shadow:0 4px 24px rgba(0,0,0,0.08);
+    max-width:420px;
+  }
+  .eyebrow{
+    font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase;
+    color:#00A8C6; margin-bottom:8px;
+  }
+  h1{
+    font-size:32px; font-weight:900; letter-spacing:1px; margin-bottom:28px; color:#111;
+  }
+  #qrcode{
+    display:inline-block; padding:16px; background:#fff; border:2px solid #eee;
+    border-radius:14px; margin-bottom:24px;
+  }
+  .url{
+    font-family:ui-monospace, monospace; font-size:13px; color:#666;
+    word-break:break-all; margin-bottom:20px;
+  }
+  .print-btn{
+    background:#00A8C6; color:#fff; border:none; border-radius:10px;
+    padding:12px 24px; font-size:14px; font-weight:700; cursor:pointer;
+  }
+  .print-btn:hover{ background:#0090ab; }
+  @media print{
+    body{ background:#fff; padding:0; }
+    .card{ box-shadow:none; }
+    .print-btn{ display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">Cesar Palace Truck Parking</div>
+    <h1>BOOKING</h1>
+    <div id="qrcode"></div>
+    <div class="url">parking.neowaan.com/dispo.html</div>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+  </div>
+
+  <script>
+    new QRCode(document.getElementById("qrcode"), {
+      text: "https://parking.neowaan.com/dispo.html",
+      width: 260,
+      height: 260,
+      colorDark: "#111111",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  </script>
+</body>
+</html>
