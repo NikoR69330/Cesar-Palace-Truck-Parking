@@ -617,6 +617,70 @@ async function renderUsersModal(){
   };
 }
 
+document.getElementById("requestsBtn").onclick = openRequestsModal;
+
+async function openRequestsModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  body.innerHTML = `<h3>Demandes de réservation</h3><div class="sub">Chargement…</div>`;
+  overlay.classList.remove("hidden");
+  await renderRequestsModal();
+}
+
+async function renderRequestsModal(){
+  const body = document.getElementById("modalBody");
+  const requests = await loadKey("requests", []);
+  const sorted = [...requests].sort((a,b)=> new Date(b.submittedAt) - new Date(a.submittedAt));
+  let rows = sorted.map(r => `
+    <div class="cat-row" style="align-items:flex-start;">
+      <div style="flex:1;">
+        <div style="font-family:var(--mono); font-weight:700; ${r.seen?'opacity:.5;':''}">${escapeHTML(r.plate)} — ${escapeHTML(r.phone||'')}</div>
+        <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">
+          Reçu le ${formatDateTimeShort(r.submittedAt)}${r.when ? ' · arrivée prévue ' + formatDateTimeShort(r.when) : ''}${r.note ? ' · ' + escapeHTML(r.note) : ''}
+        </div>
+      </div>
+      <button class="mini-btn" data-toggle="${r.id}">${r.seen ? '↩️ Non lu' : '✓ Vu'}</button>
+      <button class="del" data-del="${r.id}" title="Supprimer">✕</button>
+    </div>
+  `).join("") || `<div class="journal-empty">Aucune demande reçue.</div>`;
+
+  body.innerHTML = `
+    <h3>Demandes de réservation</h3>
+    <div class="sub">Envoyées depuis la page publique (dispo.html) par les chauffeurs.</div>
+    <div class="cat-list" id="reqList">${rows}</div>
+    <div class="modal-actions"><button class="btn" id="closeReqBtn">Fermer</button></div>
+  `;
+  document.getElementById("closeReqBtn").onclick = closeModal;
+  body.querySelectorAll("[data-toggle]").forEach(btn=>{
+    btn.onclick = async () => {
+      const id = btn.dataset.toggle;
+      const updated = requests.map(r => r.id===id ? {...r, seen: !r.seen} : r);
+      await saveKey("requests", updated, "demandes");
+      await renderRequestsModal();
+      updateRequestsBadge();
+    };
+  });
+  body.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.onclick = async () => {
+      if(!confirm("Supprimer cette demande ?")) return;
+      const id = btn.dataset.del;
+      const updated = requests.filter(r => r.id!==id);
+      await saveKey("requests", updated, "demandes");
+      await renderRequestsModal();
+      updateRequestsBadge();
+    };
+  });
+}
+
+async function updateRequestsBadge(){
+  const requests = await loadKey("requests", []);
+  const unseen = requests.filter(r => !r.seen).length;
+  const badge = document.getElementById("reqBadge");
+  if(unseen > 0){ badge.style.display = "inline-block"; badge.textContent = unseen; }
+  else { badge.style.display = "none"; }
+}
 /* ---------- licence / accès (vérifié côté serveur, code jamais exposé) ---------- */
 let license = { blocked:false, locked:false, paidUntil:null };
 let lastLicenseJSON = "";
