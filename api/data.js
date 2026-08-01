@@ -1,5 +1,5 @@
 const { kvGet, kvSet } = require('./_redis');
-const ALLOWED_TYPES = ['state', 'slots', 'categories', 'reservations', 'tariff', 'history', 'requests', 'forceFull'];
+const ALLOWED_TYPES = ['state', 'slots', 'categories', 'reservations', 'tariff', 'history', 'requests', 'forceFull', 'prebookings'];
 const LICENSE_KEY = 'parking:license';
 async function isLicenseBlocked() {
   const lic = await kvGet(LICENSE_KEY);
