@@ -79,20 +79,6 @@
 
   <div class="sync" id="syncLabel">…</div>
 
-  <div class="card">
-    <div class="gauge-wrap">
-      <div class="gauge-pct" id="gaugePct">—</div>
-      <div class="gauge-lbl" id="txtOccupation">Taux d'occupation</div>
-    </div>
-    <div class="gauge-track" id="gaugeTrack"></div>
-    <div class="stats-row">
-      <div class="stat"><div class="num free" id="statFree">—</div><div class="lbl" id="txtFree">Places libres</div></div>
-      <div class="stat"><div class="num occ" id="statOcc">—</div><div class="lbl" id="txtOcc">Occupées</div></div>
-    </div>
-    <div class="zone-row"><span id="txtZoneFrigo">Zone frigo</span><b id="zoneFrigo">—</b></div>
-    <div class="zone-row"><span id="txtZoneStd">Zone standard</span><b id="zoneStd">—</b></div>
-  </div>
-
   <div class="card" id="reserveCard">
     <h3 id="txtReserveTitle" style="margin:0 0 4px 0; font-size:16px;">📋 Demander une place</h3>
     <p id="txtReserveDesc" style="font-size:12px; color:var(--text-dim); margin:0 0 16px 0;"></p>
@@ -442,44 +428,7 @@ async function refresh(){
       attachSubmitHandler();
     }
   }
-  const slots = await loadKey('slots', []);
-  const state = await loadKey('state', {});
-  const list = slots.map(id => state[id]).filter(Boolean);
-  if(list.length === 0){
-    document.getElementById('syncLabel').textContent = t.unavailable;
-    return;
-  }
-  const occ = list.filter(s => s.status === 'occupied').length;
-  const free = list.length - occ;
-  const pct = Math.round((occ / list.length) * 100);
-
-  document.getElementById('statFree').textContent = free;
-  document.getElementById('statOcc').textContent = occ;
-  document.getElementById('gaugePct').textContent = pct + '%';
   document.getElementById('syncLabel').textContent = t.updatedAt(new Date().toLocaleTimeString(currentLang));
-
-  const frigoIds = slots.filter(isFrigoZone);
-  const frigoOcc = frigoIds.filter(id => state[id] && state[id].status === 'occupied').length;
-  lastFrigoTxt = `${t.freeCount(frigoIds.length - frigoOcc)} / ${frigoIds.length}`;
-  document.getElementById('zoneFrigo').textContent = lastFrigoTxt;
-
-  const stdIds = slots.filter(id => !isFrigoZone(id));
-  const stdOcc = stdIds.filter(id => state[id] && state[id].status === 'occupied').length;
-  lastStdTxt = `${t.freeCount(stdIds.length - stdOcc)} / ${stdIds.length}`;
-  document.getElementById('zoneStd').textContent = lastStdTxt;
-
-  const track = document.getElementById('gaugeTrack');
-  track.innerHTML = '';
-  const segCount = 36;
-  const filled = Math.round((pct/100) * segCount);
-  let color = 'var(--green)';
-  if(pct >= 90) color = 'var(--red)'; else if(pct >= 70) color = 'var(--amber)';
-  for(let i=0;i<segCount;i++){
-    const seg = document.createElement('div');
-    seg.className = 'seg' + (i<filled ? ' on' : '');
-    if(i<filled) seg.style.setProperty('--seg-color', color);
-    track.appendChild(seg);
-  }
 }
 
 function attachSubmitHandler(){
