@@ -709,6 +709,156 @@ async function updateFullToggleUI() {
     btn.style.color = "";
   }
 }
+document.getElementById("prebookBtn").onclick = openPrebookModal;
+
+async function openPrebookModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  body.innerHTML = `<h3>Pré-réservations</h3><div class="sub">Chargement…</div>`;
+  overlay.classList.remove("hidden");
+  await renderPrebookModal();
+}
+
+function prebookStatusLabel(status){
+  if(status === "arrived") return `<span style="color:var(--green); font-weight:700;">✓ Arrivé</span>`;
+  if(status === "cancelled") return `<span style="color:var(--text-faint); text-decoration:line-through;">Annulé</span>`;
+  return `<span style="color:var(--amber); font-weight:700;">À venir</span>`;
+}
+
+async function renderPrebookModal(){
+  const body = document.getElementById("modalBody");
+  const prebookings = await loadKey("prebookings", []);
+  const catOptions = categories.map(c=>`<option value="${c.id}">${escapeHTML(c.label)}</option>`).join("");
+
+  const active = prebookings.filter(p => p.status !== "cancelled" && p.status !== "arrived");
+  const sorted = [...active].sort((a,b) => new Date(a.date+"T"+(a.time||"00:00")) - new Date(b.date+"T"+(b.time||"00:00")));
+  const past = prebookings.filter(p => p.status === "arrived" || p.status === "cancelled")
+    .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0,20);
+
+  const todayStr = todayKey();
+  let rows = sorted.map(p => {
+    const cat = p.category ? getCategory(p.category) : null;
+    const isToday = p.date === todayStr;
+    return `
+    <div class="cat-row" style="align-items:flex-start; ${isToday ? 'border-color:var(--amber);' : ''}">
+      <div style="flex:1;">
+        <div style="font-family:var(--mono); font-weight:700;">
+          ${escapeHTML(p.plate)} ${cat ? `<span class="cat-dot" style="display:inline-block;background:${cat.color}"></span>` : ''}
+          ${isToday ? '<span style="color:var(--amber); font-size:11px; margin-left:6px;">AUJOURD\'HUI</span>' : ''}
+        </div>
+        <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">
+          ${new Date(p.date).toLocaleDateString('fr-FR')}${p.time ? ' à ' + p.time : ''}${p.phone ? ' · ' + escapeHTML(p.phone) : ''}${p.note ? ' · ' + escapeHTML(p.note) : ''}
+        </div>
+      </div>
+      <button class="mini-btn" data-arrive="${p.id}" title="Marquer arrivé">✓ Arrivé</button>
+      <button class="del" data-cancel="${p.id}" title="Annuler">✕</button>
+    </div>`;
+  }).join("") || `<div class="journal-empty">Aucune pré-réservation à venir.</div>`;
+
+  let pastRows = past.map(p => `
+    <div class="journal-row">
+      <span>${new Date(p.date).toLocaleDateString('fr-FR')} — ${escapeHTML(p.plate)}</span>
+      ${prebookStatusLabel(p.status)}
+    </div>`).join("") || `<div class="journal-empty">Aucun historique.</div>`;
+
+  body.innerHTML = `
+    <h3>Pré-réservations</h3>
+    <div class="sub">Bloque à l'avance une place pour une date future, avant même l'arrivée du camion.</div>
+
+    <div class="cat-list" id="prebookList" style="margin-bottom:18px;">${rows}</div>
+
+    <button class="btn" id="showAddPrebookBtn" style="margin-bottom:18px;">➕ Nouvelle pré-réservation</button>
+
+    <div id="addPrebookForm" style="display:none; margin-bottom:22px;">
+      <div class="field"><label>Immatriculation</label><input type="text" id="pbPlate" placeholder="AB-123-CD"></div>
+      <div class="field"><label>Date prévue</label><input type="date" id="pbDate" min="${todayStr}"></div>
+      <div class="field"><label>Heure prévue (facultatif)</label><input type="time" id="pbTime"></div>
+      <div class="field"><label>Catégorie / type de règlement</label><select id="pbCategory"><option value="">Sélectionner…</option>${catOptions}</select></div>
+      <div class="field"><label>Contact (téléphone)</label><input type="text" id="pbPhone" placeholder="06 12 34 56 78"></div>
+      <div class="field"><label>Note (facultatif)</label><input type="text" id="pbNote" placeholder="Ex: camion frigo, 72h…"></div>
+      <div class="err" id="pbErr" style="display:none;">Merci de renseigner au moins la plaque et la date.</div>
+      <div class="modal-actions"><button class="btn primary" id="confirmPrebookBtn">Créer la pré-réservation</button></div>
+    </div>
+
+    <div class="sub" style="margin-top:8px;">Historique récent</div>
+    <div class="journal-list" style="max-height:160px;">${pastRows}</div>
+
+    <div class="modal-actions"><button class="btn" id="closePrebookBtn">Fermer</button></div>
+  `;
+
+  document.getElementById("closePrebookBtn").onclick = closeModal;
+  document.getElementById("showAddPrebookBtn").onclick = () => {
+    document.getElementById("addPrebookForm").style.display = "block";
+  };
+
+  document.getElementById("confirmPrebookBtn").onclick = async () => {
+    const plate = document.getElementById("pbPlate").value.trim();
+    const date = document.getElementById("pbDate").value;
+    const time = document.getElementById("pbTime").value;
+    const category = document.getElementById("pbCategory").value;
+    const phone = document.getElementById("pbPhone").value.trim();
+    const note = document.getElementById("pbNote").value.trim();
+    const errEl = document.getElementById("pbErr");
+    errEl.style.display = "none";
+    if(!plate || !date){ errEl.style.display = "block"; return; }
+    const updated = [...prebookings, {
+      id: "pb_" + Date.now(),
+      plate: plate.toUpperCase(), date, time: time || null,
+      category: category || null, phone, note,
+      status: "pending",
+      createdBy: currentUser ? currentUser.name : null,
+      createdAt: new Date().toISOString()
+    }];
+    await saveKey("prebookings", updated, "pré-réservations");
+    await renderPrebookModal();
+    updatePrebookBadge();
+  };
+
+  body.querySelectorAll("[data-cancel]").forEach(btn => {
+    btn.onclick = async () => {
+      if(!confirm("Annuler cette pré-réservation ?")) return;
+      const id = btn.dataset.cancel;
+      const updated = prebookings.map(p => p.id===id ? {...p, status:"cancelled"} : p);
+      await saveKey("prebookings", updated, "pré-réservations");
+      await renderPrebookModal();
+      updatePrebookBadge();
+    };
+  });
+
+  body.querySelectorAll("[data-arrive]").forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.arrive;
+      const pb = prebookings.find(p => p.id === id);
+      if(!pb) return;
+      const updated = prebookings.map(p => p.id===id ? {...p, status:"arrived"} : p);
+      await saveKey("prebookings", updated, "pré-réservations");
+      closeModal();
+      updatePrebookBadge();
+      // Ouvre directement une place libre pour finaliser l'entrée, plaque déjà pré-remplie
+      const freeId = orderedSlots.find(sid => spots[sid] && spots[sid].status === "free");
+      if(freeId){
+        openModal(freeId);
+        setTimeout(() => {
+          const plateInput = document.getElementById("plateInput");
+          const catInput = document.getElementById("catInput");
+          if(plateInput) plateInput.value = pb.plate;
+          if(catInput && pb.category) catInput.value = pb.category;
+        }, 0);
+      }
+    };
+  });
+}
+
+async function updatePrebookBadge(){
+  const prebookings = await loadKey("prebookings", []);
+  const todayStr = todayKey();
+  const todayCount = prebookings.filter(p => p.status === "pending" && p.date === todayStr).length;
+  const badge = document.getElementById("pbBadge");
+  if(todayCount > 0){ badge.style.display = "inline-block"; badge.textContent = todayCount; }
+  else { badge.style.display = "none"; }
+}
 /* ---------- licence / accès (vérifié côté serveur, code jamais exposé) ---------- */
 let license = { blocked:false, locked:false, paidUntil:null };
 let lastLicenseJSON = "";
