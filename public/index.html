@@ -682,6 +682,32 @@ async function updateRequestsBadge(){
   if(unseen > 0){ badge.style.display = "inline-block"; badge.textContent = unseen; }
   else { badge.style.display = "none"; }
 }
+document.getElementById("fullToggleBtn").onclick = async () => {
+  const current = await loadKey("forceFull", false);
+  const newVal = !current;
+  const msg = newVal
+    ? "Marquer le parking comme COMPLET sur la page publique (dispo.html) ? Les demandes de réservation seront masquées."
+    : "Réactiver les réservations sur la page publique ?";
+  if (!confirm(msg)) return;
+  await saveKey("forceFull", newVal, "statut parking complet");
+  await updateFullToggleUI();
+};
+
+async function updateFullToggleUI() {
+  const isFull = await loadKey("forceFull", false);
+  const btn = document.getElementById("fullToggleBtn");
+  if (isFull) {
+    btn.textContent = "✅ Réactiver réservations";
+    btn.style.background = "rgba(232,72,60,0.15)";
+    btn.style.borderColor = "var(--red)";
+    btn.style.color = "var(--red)";
+  } else {
+    btn.textContent = "🚫 Marquer complet";
+    btn.style.background = "";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+  }
+}
 /* ---------- licence / accès (vérifié côté serveur, code jamais exposé) ---------- */
 let license = { blocked:false, locked:false, paidUntil:null };
 let lastLicenseJSON = "";
