@@ -388,6 +388,7 @@ function renderLangBar(){
 
 /* ---------- logique disponibilité / réservation ---------- */
 const REQUESTS_KEY = 'requests';
+const PREBOOKINGS_KEY = 'prebookings';
 
 function isFrigoZone(id){ const n = parseInt(id, 10); return String(n) === id && n >= 1 && n <= 22; }
 
@@ -458,34 +459,49 @@ async function refresh(){
 function attachSubmitHandler(){
   const submitBtn = document.getElementById('submitBtn');
   if(!submitBtn) return;
+  const whenEl = document.getElementById('whenInput');
+  if(whenEl){
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    whenEl.min = now.toISOString().slice(0,16);
+  }
   submitBtn.onclick = async () => {
     const t = T[currentLang];
     const plate = document.getElementById('plateInput').value.trim();
-    const when = document.getElementById('whenInput').value;
+    const when = document.getElementById('whenInput').value; // format "YYYY-MM-DDTHH:MM"
     const phone = document.getElementById('phoneInput').value.trim();
     const note = document.getElementById('noteInput').value.trim();
     const errEl = document.getElementById('formErr');
     errEl.style.display = 'none';
-    if(!plate || !phone){
+    if(!plate || !phone || !when){
       errEl.textContent = t.errMissing;
       errEl.style.display = 'block';
       return;
     }
+    const [datePart, timePart] = when.split('T');
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.textContent = t.sending;
     try{
-      const existing = await loadKey(REQUESTS_KEY, []);
+      // Écrit directement dans "prebookings" — même liste que celle utilisée
+      // côté équipe (index.html) : c'est une vraie réservation confirmée,
+      // pas juste une demande à valider. Elle apparaît immédiatement dans
+      // "Pré-réservations" côté opérateur, et devient trouvable via
+      // "Vérifier ma réservation".
+      const existing = await loadKey(PREBOOKINGS_KEY, []);
       const updated = [...existing, {
-        id: 'req_' + Date.now(),
+        id: 'pb_' + Date.now(),
         plate: plate.toUpperCase(),
-        when: when || null,
+        date: datePart,
+        time: timePart || null,
+        category: null,
         phone,
         note,
+        status: 'pending',
         lang: currentLang,
-        submittedAt: new Date().toISOString(),
-        seen: false
+        createdBy: 'chauffeur (public)',
+        createdAt: new Date().toISOString()
       }];
-      const ok = await saveKey(REQUESTS_KEY, updated);
+      const ok = await saveKey(PREBOOKINGS_KEY, updated);
       if(!ok) throw new Error('save failed');
       document.getElementById('reserveCard').innerHTML = `
         <div class="success-box">
