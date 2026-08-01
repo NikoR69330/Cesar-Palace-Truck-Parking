@@ -16,6 +16,11 @@
   html,body{margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:16px;}
   .wrap{max-width:480px;margin:0 auto;padding-bottom:40px;}
+
+  .lang-bar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;}
+  .lang-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);border-radius:7px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;}
+  .lang-btn.active{background:var(--amber);color:#00232b;border-color:var(--amber);}
+
   header{text-align:center;margin-bottom:20px;padding-top:8px;}
   .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:6px;}
   h1{margin:0;font-size:20px;font-weight:800;}
@@ -63,51 +68,282 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="lang-bar" id="langBar"></div>
+
   <header>
     <div class="eyebrow">Cesar Palace Truck Parking</div>
-    <h1>🚛 Disponibilités en direct</h1>
+    <h1 id="txtTitle">🚛 Disponibilités en direct</h1>
     <div class="clock" id="clock">--:--:--</div>
   </header>
 
-  <div class="sync" id="syncLabel">chargement…</div>
+  <div class="sync" id="syncLabel">…</div>
 
   <div class="card">
     <div class="gauge-wrap">
       <div class="gauge-pct" id="gaugePct">—</div>
-      <div class="gauge-lbl">Taux d'occupation</div>
+      <div class="gauge-lbl" id="txtOccupation">Taux d'occupation</div>
     </div>
     <div class="gauge-track" id="gaugeTrack"></div>
     <div class="stats-row">
-      <div class="stat"><div class="num free" id="statFree">—</div><div class="lbl">Places libres</div></div>
-      <div class="stat"><div class="num occ" id="statOcc">—</div><div class="lbl">Occupées</div></div>
+      <div class="stat"><div class="num free" id="statFree">—</div><div class="lbl" id="txtFree">Places libres</div></div>
+      <div class="stat"><div class="num occ" id="statOcc">—</div><div class="lbl" id="txtOcc">Occupées</div></div>
     </div>
-    <div class="zone-row"><span>Zone frigo</span><b id="zoneFrigo">—</b></div>
-    <div class="zone-row"><span>Zone standard</span><b id="zoneStd">—</b></div>
+    <div class="zone-row"><span id="txtZoneFrigo">Zone frigo</span><b id="zoneFrigo">—</b></div>
+    <div class="zone-row"><span id="txtZoneStd">Zone standard</span><b id="zoneStd">—</b></div>
   </div>
 
   <div class="card" id="reserveCard">
-    <h3 style="margin:0 0 4px 0; font-size:16px;">📋 Demander une place</h3>
-    <p style="font-size:12px; color:var(--text-dim); margin:0 0 16px 0;">
-      Votre demande sera transmise à l'équipe du parking. Elle n'est pas confirmée automatiquement — vous serez recontacté si besoin.
-    </p>
+    <h3 id="txtReserveTitle" style="margin:0 0 4px 0; font-size:16px;">📋 Demander une place</h3>
+    <p id="txtReserveDesc" style="font-size:12px; color:var(--text-dim); margin:0 0 16px 0;"></p>
     <div id="reserveForm">
-      <label>Immatriculation</label>
+      <label id="txtLabelPlate">Immatriculation</label>
       <input id="plateInput" placeholder="AB-123-CD">
-      <label>Date et heure d'arrivée prévues</label>
+      <label id="txtLabelWhen">Date et heure d'arrivée prévues</label>
       <input id="whenInput" type="datetime-local">
-      <label>Contact (téléphone)</label>
-      <input id="phoneInput" placeholder="06 12 34 56 78">
-      <label>Note (facultatif)</label>
-      <textarea id="noteInput" placeholder="Ex: camion frigo, besoin de 72h…"></textarea>
-      <div class="err" id="formErr">Merci de renseigner au moins la plaque et un contact.</div>
+      <label id="txtLabelPhone">Contact (téléphone)</label>
+      <input id="phoneInput" placeholder="+33 6 12 34 56 78">
+      <label id="txtLabelNote">Note (facultatif)</label>
+      <textarea id="noteInput"></textarea>
+      <div class="err" id="formErr"></div>
       <button class="btn" id="submitBtn">Envoyer la demande</button>
     </div>
   </div>
 
-  <div class="footnote">Les disponibilités se mettent à jour automatiquement.</div>
+  <div class="footnote" id="txtFootnote">Les disponibilités se mettent à jour automatiquement.</div>
 </div>
 
 <script>
+/* ---------- traductions ---------- */
+const LANGS = [
+  { code:'fr', flag:'🇫🇷', label:'FR' },
+  { code:'en', flag:'🇬🇧', label:'EN' },
+  { code:'es', flag:'🇪🇸', label:'ES' },
+  { code:'it', flag:'🇮🇹', label:'IT' },
+  { code:'de', flag:'🇩🇪', label:'DE' },
+  { code:'lt', flag:'🇱🇹', label:'LT' },
+  { code:'ru', flag:'🇷🇺', label:'RU' },
+  { code:'uk', flag:'🇺🇦', label:'UA' },
+  { code:'pl', flag:'🇵🇱', label:'PL' },
+  { code:'ro', flag:'🇷🇴', label:'RO' },
+];
+
+const T = {
+  fr:{
+    title:"🚛 Disponibilités en direct", occupation:"Taux d'occupation",
+    free:"Places libres", occ:"Occupées", zoneFrigo:"Zone frigo", zoneStd:"Zone standard",
+    reserveTitle:"📋 Demander une place",
+    reserveDesc:"Votre demande sera transmise à l'équipe du parking. Elle n'est pas confirmée automatiquement — vous serez recontacté si besoin.",
+    labelPlate:"Immatriculation", labelWhen:"Date et heure d'arrivée prévues",
+    labelPhone:"Contact (téléphone)", labelNote:"Note (facultatif)",
+    notePlaceholder:"Ex: camion frigo, besoin de 72h…",
+    submit:"Envoyer la demande", sending:"Envoi…",
+    errMissing:"Merci de renseigner au moins la plaque et un contact.",
+    errNetwork:"Impossible d'envoyer la demande. Vérifiez votre connexion et réessayez.",
+    successTitle:"Demande envoyée",
+    successDesc:(plate)=>`L'équipe du parking a bien reçu votre demande pour ${plate}. Vous serez recontacté si besoin.`,
+    footnote:"Les disponibilités se mettent à jour automatiquement.",
+    loading:"chargement…", updatedAt:(t)=>`mis à jour à ${t}`, unavailable:"indisponible pour le moment",
+    freeCount:(n)=>`${n} libre(s)`
+  },
+  en:{
+    title:"🚛 Live availability", occupation:"Occupancy rate",
+    free:"Free spots", occ:"Occupied", zoneFrigo:"Refrigerated zone", zoneStd:"Standard zone",
+    reserveTitle:"📋 Request a spot",
+    reserveDesc:"Your request will be sent to the parking team. It is not confirmed automatically — you will be contacted back if needed.",
+    labelPlate:"License plate", labelWhen:"Planned arrival date and time",
+    labelPhone:"Contact (phone)", labelNote:"Note (optional)",
+    notePlaceholder:"E.g.: refrigerated truck, need 72h…",
+    submit:"Send request", sending:"Sending…",
+    errMissing:"Please fill in at least the plate and a contact.",
+    errNetwork:"Unable to send the request. Check your connection and try again.",
+    successTitle:"Request sent",
+    successDesc:(plate)=>`The parking team has received your request for ${plate}. You will be contacted back if needed.`,
+    footnote:"Availability updates automatically.",
+    loading:"loading…", updatedAt:(t)=>`updated at ${t}`, unavailable:"temporarily unavailable",
+    freeCount:(n)=>`${n} free`
+  },
+  es:{
+    title:"🚛 Disponibilidad en directo", occupation:"Tasa de ocupación",
+    free:"Plazas libres", occ:"Ocupadas", zoneFrigo:"Zona frigorífica", zoneStd:"Zona estándar",
+    reserveTitle:"📋 Solicitar una plaza",
+    reserveDesc:"Su solicitud se enviará al equipo del parking. No se confirma automáticamente — se le contactará si es necesario.",
+    labelPlate:"Matrícula", labelWhen:"Fecha y hora de llegada prevista",
+    labelPhone:"Contacto (teléfono)", labelNote:"Nota (opcional)",
+    notePlaceholder:"Ej: camión frigorífico, necesito 72h…",
+    submit:"Enviar solicitud", sending:"Enviando…",
+    errMissing:"Por favor, indique al menos la matrícula y un contacto.",
+    errNetwork:"No se pudo enviar la solicitud. Compruebe su conexión e inténtelo de nuevo.",
+    successTitle:"Solicitud enviada",
+    successDesc:(plate)=>`El equipo del parking ha recibido su solicitud para ${plate}. Se le contactará si es necesario.`,
+    footnote:"La disponibilidad se actualiza automáticamente.",
+    loading:"cargando…", updatedAt:(t)=>`actualizado a las ${t}`, unavailable:"no disponible por el momento",
+    freeCount:(n)=>`${n} libre(s)`
+  },
+  it:{
+    title:"🚛 Disponibilità in tempo reale", occupation:"Tasso di occupazione",
+    free:"Posti liberi", occ:"Occupati", zoneFrigo:"Zona frigo", zoneStd:"Zona standard",
+    reserveTitle:"📋 Richiedi un posto",
+    reserveDesc:"La tua richiesta sarà inviata al team del parcheggio. Non è confermata automaticamente — sarai ricontattato se necessario.",
+    labelPlate:"Targa", labelWhen:"Data e ora di arrivo previste",
+    labelPhone:"Contatto (telefono)", labelNote:"Nota (facoltativa)",
+    notePlaceholder:"Es: camion frigo, necessito 72h…",
+    submit:"Invia richiesta", sending:"Invio…",
+    errMissing:"Inserisci almeno la targa e un contatto.",
+    errNetwork:"Impossibile inviare la richiesta. Controlla la connessione e riprova.",
+    successTitle:"Richiesta inviata",
+    successDesc:(plate)=>`Il team del parcheggio ha ricevuto la tua richiesta per ${plate}. Sarai ricontattato se necessario.`,
+    footnote:"La disponibilità si aggiorna automaticamente.",
+    loading:"caricamento…", updatedAt:(t)=>`aggiornato alle ${t}`, unavailable:"temporaneamente non disponibile",
+    freeCount:(n)=>`${n} libero/i`
+  },
+  de:{
+    title:"🚛 Verfügbarkeit live", occupation:"Belegungsrate",
+    free:"Freie Plätze", occ:"Belegt", zoneFrigo:"Kühlzone", zoneStd:"Standardzone",
+    reserveTitle:"📋 Platz anfragen",
+    reserveDesc:"Ihre Anfrage wird an das Parkplatz-Team gesendet. Sie wird nicht automatisch bestätigt — bei Bedarf werden Sie kontaktiert.",
+    labelPlate:"Kennzeichen", labelWhen:"Geplantes Ankunftsdatum und -uhrzeit",
+    labelPhone:"Kontakt (Telefon)", labelNote:"Notiz (optional)",
+    notePlaceholder:"Z.B.: Kühl-Lkw, benötige 72h…",
+    submit:"Anfrage senden", sending:"Wird gesendet…",
+    errMissing:"Bitte geben Sie mindestens das Kennzeichen und einen Kontakt an.",
+    errNetwork:"Anfrage konnte nicht gesendet werden. Bitte Verbindung prüfen und erneut versuchen.",
+    successTitle:"Anfrage gesendet",
+    successDesc:(plate)=>`Das Parkplatz-Team hat Ihre Anfrage für ${plate} erhalten. Bei Bedarf werden Sie kontaktiert.`,
+    footnote:"Die Verfügbarkeit wird automatisch aktualisiert.",
+    loading:"lädt…", updatedAt:(t)=>`aktualisiert um ${t}`, unavailable:"momentan nicht verfügbar",
+    freeCount:(n)=>`${n} frei`
+  },
+  lt:{
+    title:"🚛 Laisvos vietos tiesiogiai", occupation:"Užimtumo lygis",
+    free:"Laisvos vietos", occ:"Užimta", zoneFrigo:"Šaldymo zona", zoneStd:"Standartinė zona",
+    reserveTitle:"📋 Prašyti vietos",
+    reserveDesc:"Jūsų prašymas bus perduotas aikštelės komandai. Jis nėra patvirtinamas automatiškai — su jumis susisieks, jei reikės.",
+    labelPlate:"Valstybinis numeris", labelWhen:"Numatoma atvykimo data ir laikas",
+    labelPhone:"Kontaktas (telefonas)", labelNote:"Pastaba (neprivaloma)",
+    notePlaceholder:"Pvz.: šaldytuvas, reikia 72 val…",
+    submit:"Siųsti prašymą", sending:"Siunčiama…",
+    errMissing:"Prašome nurodyti bent numerį ir kontaktą.",
+    errNetwork:"Nepavyko išsiųsti prašymo. Patikrinkite ryšį ir bandykite dar kartą.",
+    successTitle:"Prašymas išsiųstas",
+    successDesc:(plate)=>`Aikštelės komanda gavo jūsų prašymą dėl ${plate}. Su jumis susisieks, jei reikės.`,
+    footnote:"Laisvos vietos atnaujinamos automatiškai.",
+    loading:"kraunama…", updatedAt:(t)=>`atnaujinta ${t}`, unavailable:"laikinai neprieinama",
+    freeCount:(n)=>`${n} laisva(-os)`
+  },
+  ru:{
+    title:"🚛 Наличие мест онлайн", occupation:"Уровень загруженности",
+    free:"Свободно мест", occ:"Занято", zoneFrigo:"Зона рефрижераторов", zoneStd:"Стандартная зона",
+    reserveTitle:"📋 Запросить место",
+    reserveDesc:"Ваш запрос будет передан команде парковки. Он не подтверждается автоматически — с вами свяжутся при необходимости.",
+    labelPlate:"Номер автомобиля", labelWhen:"Планируемая дата и время прибытия",
+    labelPhone:"Контакт (телефон)", labelNote:"Примечание (необязательно)",
+    notePlaceholder:"Напр.: рефрижератор, нужно 72ч…",
+    submit:"Отправить запрос", sending:"Отправка…",
+    errMissing:"Пожалуйста, укажите хотя бы номер и контакт.",
+    errNetwork:"Не удалось отправить запрос. Проверьте соединение и попробуйте снова.",
+    successTitle:"Запрос отправлен",
+    successDesc:(plate)=>`Команда парковки получила ваш запрос по номеру ${plate}. С вами свяжутся при необходимости.`,
+    footnote:"Наличие мест обновляется автоматически.",
+    loading:"загрузка…", updatedAt:(t)=>`обновлено в ${t}`, unavailable:"временно недоступно",
+    freeCount:(n)=>`${n} свободно`
+  },
+  uk:{
+    title:"🚛 Наявність місць онлайн", occupation:"Рівень завантаженості",
+    free:"Вільно місць", occ:"Зайнято", zoneFrigo:"Зона рефрижераторів", zoneStd:"Стандартна зона",
+    reserveTitle:"📋 Запросити місце",
+    reserveDesc:"Ваш запит буде передано команді паркінгу. Він не підтверджується автоматично — з вами зв'яжуться за потреби.",
+    labelPlate:"Номер автомобіля", labelWhen:"Планована дата і час прибуття",
+    labelPhone:"Контакт (телефон)", labelNote:"Примітка (необов'язково)",
+    notePlaceholder:"Напр.: рефрижератор, потрібно 72г…",
+    submit:"Надіслати запит", sending:"Надсилання…",
+    errMissing:"Будь ласка, вкажіть принаймні номер і контакт.",
+    errNetwork:"Не вдалося надіслати запит. Перевірте з'єднання і спробуйте ще раз.",
+    successTitle:"Запит надіслано",
+    successDesc:(plate)=>`Команда паркінгу отримала ваш запит щодо ${plate}. З вами зв'яжуться за потреби.`,
+    footnote:"Наявність місць оновлюється автоматично.",
+    loading:"завантаження…", updatedAt:(t)=>`оновлено о ${t}`, unavailable:"тимчасово недоступно",
+    freeCount:(n)=>`${n} вільно`
+  },
+  pl:{
+    title:"🚛 Dostępność na żywo", occupation:"Poziom obłożenia",
+    free:"Wolne miejsca", occ:"Zajęte", zoneFrigo:"Strefa chłodnicza", zoneStd:"Strefa standardowa",
+    reserveTitle:"📋 Poproś o miejsce",
+    reserveDesc:"Twoja prośba zostanie przekazana zespołowi parkingu. Nie jest ona potwierdzana automatycznie — skontaktujemy się w razie potrzeby.",
+    labelPlate:"Numer rejestracyjny", labelWhen:"Planowana data i godzina przyjazdu",
+    labelPhone:"Kontakt (telefon)", labelNote:"Uwaga (opcjonalnie)",
+    notePlaceholder:"Np.: chłodnia, potrzebuję 72h…",
+    submit:"Wyślij prośbę", sending:"Wysyłanie…",
+    errMissing:"Proszę podać przynajmniej numer rejestracyjny i kontakt.",
+    errNetwork:"Nie udało się wysłać prośby. Sprawdź połączenie i spróbuj ponownie.",
+    successTitle:"Prośba wysłana",
+    successDesc:(plate)=>`Zespół parkingu otrzymał Twoją prośbę dla ${plate}. Skontaktujemy się w razie potrzeby.`,
+    footnote:"Dostępność aktualizuje się automatycznie.",
+    loading:"ładowanie…", updatedAt:(t)=>`zaktualizowano o ${t}`, unavailable:"chwilowo niedostępne",
+    freeCount:(n)=>`${n} wolne`
+  },
+  ro:{
+    title:"🚛 Disponibilitate live", occupation:"Grad de ocupare",
+    free:"Locuri libere", occ:"Ocupate", zoneFrigo:"Zonă frigorifică", zoneStd:"Zonă standard",
+    reserveTitle:"📋 Solicită un loc",
+    reserveDesc:"Cererea dumneavoastră va fi trimisă echipei parcării. Nu este confirmată automat — veți fi contactat dacă este necesar.",
+    labelPlate:"Număr de înmatriculare", labelWhen:"Data și ora de sosire estimate",
+    labelPhone:"Contact (telefon)", labelNote:"Notă (opțional)",
+    notePlaceholder:"Ex: camion frigorific, am nevoie de 72h…",
+    submit:"Trimite cererea", sending:"Se trimite…",
+    errMissing:"Vă rugăm completați cel puțin numărul și un contact.",
+    errNetwork:"Nu s-a putut trimite cererea. Verificați conexiunea și încercați din nou.",
+    successTitle:"Cerere trimisă",
+    successDesc:(plate)=>`Echipa parcării a primit cererea dumneavoastră pentru ${plate}. Veți fi contactat dacă este necesar.`,
+    footnote:"Disponibilitatea se actualizează automat.",
+    loading:"se încarcă…", updatedAt:(t)=>`actualizat la ${t}`, unavailable:"temporar indisponibil",
+    freeCount:(n)=>`${n} liber(e)`
+  }
+};
+
+let currentLang = 'fr';
+
+function detectLang(){
+  const saved = localStorage.getItem('dispoLang');
+  if(saved && T[saved]) return saved;
+  const nav = (navigator.language || 'fr').slice(0,2).toLowerCase();
+  return T[nav] ? nav : 'fr';
+}
+
+function applyLang(lang){
+  currentLang = T[lang] ? lang : 'fr';
+  localStorage.setItem('dispoLang', currentLang);
+  const t = T[currentLang];
+  document.documentElement.lang = currentLang;
+  document.getElementById('txtTitle').textContent = t.title;
+  document.getElementById('txtOccupation').textContent = t.occupation;
+  document.getElementById('txtFree').textContent = t.free;
+  document.getElementById('txtOcc').textContent = t.occ;
+  document.getElementById('txtZoneFrigo').textContent = t.zoneFrigo;
+  document.getElementById('txtZoneStd').textContent = t.zoneStd;
+  document.getElementById('txtReserveTitle').textContent = t.reserveTitle;
+  document.getElementById('txtReserveDesc').textContent = t.reserveDesc;
+  document.getElementById('txtLabelPlate').textContent = t.labelPlate;
+  document.getElementById('txtLabelWhen').textContent = t.labelWhen;
+  document.getElementById('txtLabelPhone').textContent = t.labelPhone;
+  document.getElementById('txtLabelNote').textContent = t.labelNote;
+  document.getElementById('noteInput').placeholder = t.notePlaceholder;
+  document.getElementById('submitBtn').textContent = t.submit;
+  document.getElementById('txtFootnote').textContent = t.footnote;
+  renderLangBar();
+  refreshLabelsOnly();
+}
+
+function renderLangBar(){
+  const bar = document.getElementById('langBar');
+  bar.innerHTML = LANGS.map(l =>
+    `<button class="lang-btn ${l.code===currentLang?'active':''}" data-lang="${l.code}">${l.flag} ${l.label}</button>`
+  ).join('');
+  bar.querySelectorAll('[data-lang]').forEach(btn=>{
+    btn.onclick = () => applyLang(btn.dataset.lang);
+  });
+}
+
+/* ---------- logique disponibilité / réservation ---------- */
 const REQUESTS_KEY = 'requests';
 
 function isFrigoZone(id){ const n = parseInt(id, 10); return String(n) === id && n >= 1 && n <= 22; }
@@ -129,14 +365,24 @@ async function saveKey(type, value){
   }catch(e){ return false; }
 }
 
-function tickClock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR'); }
+function tickClock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString(currentLang); }
+
+let lastFree = null, lastOcc = null, lastFrigoTxt = null, lastStdTxt = null;
+
+function refreshLabelsOnly(){
+  // Ré-applique juste les libellés déjà calculés (utile après un changement de langue sans re-fetch)
+  const t = T[currentLang];
+  if(lastFrigoTxt !== null) document.getElementById('zoneFrigo').textContent = lastFrigoTxt;
+  if(lastStdTxt !== null) document.getElementById('zoneStd').textContent = lastStdTxt;
+}
 
 async function refresh(){
+  const t = T[currentLang];
   const slots = await loadKey('slots', []);
   const state = await loadKey('state', {});
   const list = slots.map(id => state[id]).filter(Boolean);
   if(list.length === 0){
-    document.getElementById('syncLabel').textContent = 'indisponible pour le moment';
+    document.getElementById('syncLabel').textContent = t.unavailable;
     return;
   }
   const occ = list.filter(s => s.status === 'occupied').length;
@@ -146,15 +392,17 @@ async function refresh(){
   document.getElementById('statFree').textContent = free;
   document.getElementById('statOcc').textContent = occ;
   document.getElementById('gaugePct').textContent = pct + '%';
-  document.getElementById('syncLabel').textContent = 'mis à jour à ' + new Date().toLocaleTimeString('fr-FR');
+  document.getElementById('syncLabel').textContent = t.updatedAt(new Date().toLocaleTimeString(currentLang));
 
   const frigoIds = slots.filter(isFrigoZone);
   const frigoOcc = frigoIds.filter(id => state[id] && state[id].status === 'occupied').length;
-  document.getElementById('zoneFrigo').textContent = `${frigoIds.length - frigoOcc} libre(s) / ${frigoIds.length}`;
+  lastFrigoTxt = `${t.freeCount(frigoIds.length - frigoOcc)} / ${frigoIds.length}`;
+  document.getElementById('zoneFrigo').textContent = lastFrigoTxt;
 
   const stdIds = slots.filter(id => !isFrigoZone(id));
   const stdOcc = stdIds.filter(id => state[id] && state[id].status === 'occupied').length;
-  document.getElementById('zoneStd').textContent = `${stdIds.length - stdOcc} libre(s) / ${stdIds.length}`;
+  lastStdTxt = `${t.freeCount(stdIds.length - stdOcc)} / ${stdIds.length}`;
+  document.getElementById('zoneStd').textContent = lastStdTxt;
 
   const track = document.getElementById('gaugeTrack');
   track.innerHTML = '';
@@ -171,6 +419,7 @@ async function refresh(){
 }
 
 document.getElementById('submitBtn').onclick = async () => {
+  const t = T[currentLang];
   const plate = document.getElementById('plateInput').value.trim();
   const when = document.getElementById('whenInput').value;
   const phone = document.getElementById('phoneInput').value.trim();
@@ -178,12 +427,12 @@ document.getElementById('submitBtn').onclick = async () => {
   const errEl = document.getElementById('formErr');
   errEl.style.display = 'none';
   if(!plate || !phone){
-    errEl.textContent = 'Merci de renseigner au moins la plaque et un contact.';
+    errEl.textContent = t.errMissing;
     errEl.style.display = 'block';
     return;
   }
   const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.textContent = 'Envoi…';
+  btn.disabled = true; btn.textContent = t.sending;
   try{
     const existing = await loadKey(REQUESTS_KEY, []);
     const updated = [...existing, {
@@ -192,6 +441,7 @@ document.getElementById('submitBtn').onclick = async () => {
       when: when || null,
       phone,
       note,
+      lang: currentLang,
       submittedAt: new Date().toISOString(),
       seen: false
     }];
@@ -200,16 +450,17 @@ document.getElementById('submitBtn').onclick = async () => {
     document.getElementById('reserveCard').innerHTML = `
       <div class="success-box">
         <div class="icon">✅</div>
-        <h3>Demande envoyée</h3>
-        <p>L'équipe du parking a bien reçu votre demande pour <b>${plate.toUpperCase()}</b>. Vous serez recontacté si besoin.</p>
+        <h3>${t.successTitle}</h3>
+        <p>${t.successDesc(plate.toUpperCase())}</p>
       </div>`;
   }catch(e){
-    btn.disabled = false; btn.textContent = 'Envoyer la demande';
-    errEl.textContent = "Impossible d'envoyer la demande. Vérifiez votre connexion et réessayez.";
+    btn.disabled = false; btn.textContent = t.submit;
+    errEl.textContent = t.errNetwork;
     errEl.style.display = 'block';
   }
 };
 
+applyLang(detectLang());
 tickClock();
 setInterval(tickClock, 1000);
 refresh();
