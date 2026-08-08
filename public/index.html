@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Cesar Palace Truck Parking</title>
+<title>Neowaan Parking</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -234,10 +234,10 @@
 
   <header>
     <div class="brand-row">
-      <img class="brand-logo" src="data:image/jpeg;base64,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" alt="Cesar Palace">
+      <img class="brand-logo" src="/neowaan-logo.png" alt="Neowaan">
       <div>
         <div class="eyebrow">Suivi occupation temps réel · synchronisé</div>
-        <h1>Cesar Palace Truck Parking</h1>
+        <h1>Neowaan Parking</h1>
         <div class="clock" id="clock">--:--:--</div>
       </div>
     </div>
@@ -263,7 +263,7 @@
     <div class="stat-cell"><div class="stat-label">Libres</div><div class="stat-num free" id="statFree">0</div></div>
     <div class="stat-cell"><div class="stat-label">Occupées</div><div class="stat-num occ" id="statOcc">0</div></div>
     <div class="stat-cell">
-      <div class="stat-label">Réservations Travis</div>
+      <div class="stat-label">Réservations partenaire</div>
       <div class="stat-num resv" id="statResv">0/0</div>
       <div class="resv-edit" id="editResvBtn">modifier le total du jour</div>
     </div>
@@ -331,9 +331,7 @@ const TARIFF_KEY = "tariff";
 const POLL_MS = 4000;
 
 const DEFAULT_CATEGORIES = [
-  { id:"travis", label:"Travis", color:"#4aa3e0" },
-  { id:"snap", label:"Snap account", color:"#f2f2ea" },
-  { id:"trucksnb", label:"Trucks NB", color:"#2dd4bf" },
+  { id:"reservation", label:"Réservation partenaire", color:"#4aa3e0" },
   { id:"cartecarburant", label:"Carte carburant", color:"#ff8c42" },
   { id:"cb", label:"CB", color:"#9b7ede" },
   { id:"especes", label:"Espèces", color:"#7fd858" },
@@ -851,7 +849,7 @@ function printSpotTicket(id){
   .plate{ font-size:26px; font-weight:800; letter-spacing:.04em; }
   .frigo{ font-size:22px; margin-top:6px; }
 </style></head><body>
-  <div class="brand">Cesar Palace Truck Parking</div>
+  <div class="brand">Neowaan Parking</div>
   <div class="num">${id}</div>
   <div class="row"><div class="label">Plaque</div><div class="plate">${escapeHTML(s.plate)}</div></div>
   <div class="row"><div class="label">Zone</div>${zoneLabel}</div>
@@ -930,11 +928,11 @@ document.getElementById("releaseByNumberBtn").onclick = async () => {
   alert(msg || "Aucune modification.");
 };
 
-/* ---------- réservations Travis ---------- */
+/* ---------- réservations partenaire ---------- */
 document.getElementById("editResvBtn").onclick = async () => {
   const key = todayKey();
   const current = reservations[key] || {total:0, consumed:0};
-  const saisie = prompt(`Nombre total de réservations Travis pour aujourd'hui (déjà consommées : ${current.consumed}) :`, current.total);
+  const saisie = prompt(`Nombre total de réservations partenaire pour aujourd'hui (déjà consommées : ${current.consumed}) :`, current.total);
   if(saisie===null) return;
   const n = parseInt(saisie, 10);
   if(isNaN(n) || n<0){ alert("Merci de saisir un nombre valide."); return; }
@@ -1360,7 +1358,7 @@ function openModal(id){
       </div>
       <div class="field" id="customDurWrap" style="display:none;"><label>Durée personnalisée (h)</label><input id="durInput" type="number" min="0" step="0.25" placeholder="Ex: 4"></div>
       <div class="field checkbox"><input type="checkbox" id="frigoInput"><label for="frigoInput">🧊 Camion frigo</label></div>
-      <div class="field checkbox"><input type="checkbox" id="resvInput"><label for="resvInput">Correspond à une réservation Travis du jour (restant : ${remaining})</label></div>
+      <div class="field checkbox"><input type="checkbox" id="resvInput"><label for="resvInput">Correspond à une réservation partenaire du jour (restant : ${remaining})</label></div>
       <div class="modal-actions">
         <button class="btn" id="cancelBtn">Annuler</button>
         <button class="btn primary" id="confirmBtn">Occuper la place</button>
