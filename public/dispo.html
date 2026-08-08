@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Disponibilités — Cesar Palace Truck Parking</title>
+<style>
+  :root{
+    --bg:#0A0D14; --panel:#10151F; --panel-2:#161C29; --line:#232B3A;
+    --text:#EDF1F7; --text-dim:#93A0B4; --text-faint:#5C6779;
+    --blue:#29B6F6; --green:#35c47a; --red:#e8483c;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{ max-width:480px; width:100%; text-align:center; }
+  .brand{ font-family:var(--mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--blue); margin-bottom:10px; }
+  h1{ font-size:22px; margin:0 0 6px; }
+  .sub{ color:var(--text-dim); font-size:14px; margin-bottom:36px; }
+
+  .big-number{ font-family:var(--mono); font-size:96px; font-weight:800; line-height:1; color:var(--green); }
+  .big-number.low{ color:var(--red); }
+  .big-label{ font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); margin-top:8px; margin-bottom:36px; }
+
+  .stats-row{ display:flex; gap:12px; margin-bottom:28px; }
+  .stat{ flex:1; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 10px; }
+  .stat .n{ font-family:var(--mono); font-size:24px; font-weight:700; }
+  .stat .l{ font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-top:4px; }
+
+  .updated{ font-family:var(--mono); font-size:11px; color:var(--text-faint); }
+  .err{ color:var(--red); font-size:13px; margin-top:16px; display:none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">Cesar Palace Truck Parking</div>
+    <h1>Disponibilités en direct</h1>
+    <div class="sub">Consultation publique — aucune connexion requise.</div>
+
+    <div class="big-number" id="bigNumber">—</div>
+    <div class="big-label">places disponibles</div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="n" id="statTotal">—</div><div class="l">Total</div></div>
+      <div class="stat"><div class="n" id="statOcc">—</div><div class="l">Occupées</div></div>
+    </div>
+
+    <div class="updated" id="updatedLabel">Chargement…</div>
+    <div class="err" id="errMsg">Impossible de charger les disponibilités pour le moment.</div>
+  </div>
+
+<script>
+async function refresh(){
+  try{
+    const res = await fetch("/api/availability");
+    if(!res.ok) throw new Error("bad response");
+    const data = await res.json();
+    const bigNumber = document.getElementById("bigNumber");
+    bigNumber.textContent = data.free;
+    bigNumber.classList.toggle("low", data.free <= 5);
+    document.getElementById("statTotal").textContent = data.total;
+    document.getElementById("statOcc").textContent = data.occupied;
+    const t = new Date(data.updatedAt).toLocaleTimeString("fr-FR");
+    document.getElementById("updatedLabel").textContent = "Mis à jour à " + t;
+    document.getElementById("errMsg").style.display = "none";
+  }catch(e){
+    document.getElementById("errMsg").style.display = "block";
+  }
+}
+refresh();
+setInterval(refresh, 8000);
+</script>
+</body>
+</html>

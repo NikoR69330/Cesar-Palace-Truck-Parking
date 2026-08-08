@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
 <title>Neowaan Parking</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#14171a; --panel:#1c2024; --panel-2:#22262b; --line:#2a2f34;
     --text:#eae7e1; --text-dim:#8b9298; --text-faint:#5a6067;
-    --amber:#29b6f6; --amber-dim:#1746a2;
+    --amber:#00D4FF; --amber-dim:#0E7A8F;
     --green:#35c47a; --green-dim:rgba(53,196,122,0.14);
     --yellow:#e6b800; --red:#e8483c; --red-dim:rgba(232,72,60,0.14);
     --blue:#4aa3e0; --blue-dim:rgba(74,163,224,0.15);
@@ -237,7 +239,9 @@
       <img class="brand-logo" src="/neowaan-logo.png" alt="Neowaan">
       <div>
         <div class="eyebrow">Suivi occupation temps réel · synchronisé</div>
+
         <h1>Neowaan Parking</h1>
+
         <div class="clock" id="clock">--:--:--</div>
       </div>
     </div>
@@ -278,6 +282,9 @@
     <button class="btn-sm" id="tariffBtn">💶 Tarif</button>
     <button class="btn-sm" id="caBtn" style="display:none;">📈 Synthèse CA</button>
     <button class="btn-sm" id="usersBtn" style="display:none;">👥 Comptes</button>
+    <button class="btn-sm" id="requestsBtn">📋 Demandes<span id="reqBadge" style="display:none; margin-left:6px; background:var(--red); color:#fff; border-radius:10px; padding:1px 7px; font-size:11px;">0</span></button>
+    <button class="btn-sm" id="fullToggleBtn">🚫 Marquer complet</button>
+    <button class="btn-sm" id="prebookBtn">📅 Pré-réservations<span id="pbBadge" style="display:none; margin-left:6px; background:var(--amber); color:#1a1400; border-radius:10px; padding:1px 7px; font-size:11px;">0</span></button>
     <button class="btn-sm" id="journalBtn">📋 Journal complet</button>
     <button class="btn-sm" id="exportCsvBtn">📊 Export CSV</button>
     <button class="btn-sm" id="exportPdfBtn">🖨️ Export PDF</button>
@@ -613,6 +620,246 @@ async function renderUsersModal(){
   };
 }
 
+document.getElementById("requestsBtn").onclick = openRequestsModal;
+
+async function openRequestsModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  body.innerHTML = `<h3>Demandes de réservation</h3><div class="sub">Chargement…</div>`;
+  overlay.classList.remove("hidden");
+  await renderRequestsModal();
+}
+
+async function renderRequestsModal(){
+  const body = document.getElementById("modalBody");
+  const requests = await loadKey("requests", []);
+  const sorted = [...requests].sort((a,b)=> new Date(b.submittedAt) - new Date(a.submittedAt));
+  let rows = sorted.map(r => `
+    <div class="cat-row" style="align-items:flex-start;">
+      <div style="flex:1;">
+        <div style="font-family:var(--mono); font-weight:700; ${r.seen?'opacity:.5;':''}">${escapeHTML(r.plate)} — ${escapeHTML(r.phone||'')}</div>
+        <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">
+          Reçu le ${formatDateTimeShort(r.submittedAt)}${r.when ? ' · arrivée prévue ' + formatDateTimeShort(r.when) : ''}${r.note ? ' · ' + escapeHTML(r.note) : ''}
+        </div>
+      </div>
+      <button class="mini-btn" data-toggle="${r.id}">${r.seen ? '↩️ Non lu' : '✓ Vu'}</button>
+      <button class="del" data-del="${r.id}" title="Supprimer">✕</button>
+    </div>
+  `).join("") || `<div class="journal-empty">Aucune demande reçue.</div>`;
+
+  body.innerHTML = `
+    <h3>Demandes de réservation</h3>
+    <div class="sub">Envoyées depuis la page publique (dispo.html) par les chauffeurs.</div>
+    <div class="cat-list" id="reqList">${rows}</div>
+    <div class="modal-actions"><button class="btn" id="closeReqBtn">Fermer</button></div>
+  `;
+  document.getElementById("closeReqBtn").onclick = closeModal;
+  body.querySelectorAll("[data-toggle]").forEach(btn=>{
+    btn.onclick = async () => {
+      const id = btn.dataset.toggle;
+      const updated = requests.map(r => r.id===id ? {...r, seen: !r.seen} : r);
+      await saveKey("requests", updated, "demandes");
+      await renderRequestsModal();
+      updateRequestsBadge();
+    };
+  });
+  body.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.onclick = async () => {
+      if(!confirm("Supprimer cette demande ?")) return;
+      const id = btn.dataset.del;
+      const updated = requests.filter(r => r.id!==id);
+      await saveKey("requests", updated, "demandes");
+      await renderRequestsModal();
+      updateRequestsBadge();
+    };
+  });
+}
+
+async function updateRequestsBadge(){
+  const requests = await loadKey("requests", []);
+  const unseen = requests.filter(r => !r.seen).length;
+  const badge = document.getElementById("reqBadge");
+  if(unseen > 0){ badge.style.display = "inline-block"; badge.textContent = unseen; }
+  else { badge.style.display = "none"; }
+}
+document.getElementById("fullToggleBtn").onclick = async () => {
+  const current = await loadKey("forceFull", false);
+  const newVal = !current;
+  const msg = newVal
+    ? "Marquer le parking comme COMPLET sur la page publique (dispo.html) ? Les demandes de réservation seront masquées."
+    : "Réactiver les réservations sur la page publique ?";
+  if (!confirm(msg)) return;
+  await saveKey("forceFull", newVal, "statut parking complet");
+  await updateFullToggleUI();
+};
+
+async function updateFullToggleUI() {
+  const isFull = await loadKey("forceFull", false);
+  const btn = document.getElementById("fullToggleBtn");
+  if (isFull) {
+    btn.textContent = "✅ Réactiver réservations";
+    btn.style.background = "rgba(232,72,60,0.15)";
+    btn.style.borderColor = "var(--red)";
+    btn.style.color = "var(--red)";
+  } else {
+    btn.textContent = "🚫 Marquer complet";
+    btn.style.background = "";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+  }
+}
+document.getElementById("prebookBtn").onclick = openPrebookModal;
+
+async function openPrebookModal(){
+  modalOpen = true;
+  const overlay = document.getElementById("overlay");
+  const body = document.getElementById("modalBody");
+  body.className = "modal wide";
+  body.innerHTML = `<h3>Pré-réservations</h3><div class="sub">Chargement…</div>`;
+  overlay.classList.remove("hidden");
+  await renderPrebookModal();
+}
+
+function prebookStatusLabel(status){
+  if(status === "arrived") return `<span style="color:var(--green); font-weight:700;">✓ Arrivé</span>`;
+  if(status === "cancelled") return `<span style="color:var(--text-faint); text-decoration:line-through;">Annulé</span>`;
+  return `<span style="color:var(--amber); font-weight:700;">À venir</span>`;
+}
+
+async function renderPrebookModal(){
+  const body = document.getElementById("modalBody");
+  const prebookings = await loadKey("prebookings", []);
+  const catOptions = categories.map(c=>`<option value="${c.id}">${escapeHTML(c.label)}</option>`).join("");
+
+  const active = prebookings.filter(p => p.status !== "cancelled" && p.status !== "arrived");
+  const sorted = [...active].sort((a,b) => new Date(a.date+"T"+(a.time||"00:00")) - new Date(b.date+"T"+(b.time||"00:00")));
+  const past = prebookings.filter(p => p.status === "arrived" || p.status === "cancelled")
+    .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0,20);
+
+  const todayStr = todayKey();
+  let rows = sorted.map(p => {
+    const cat = p.category ? getCategory(p.category) : null;
+    const isToday = p.date === todayStr;
+    return `
+    <div class="cat-row" style="align-items:flex-start; ${isToday ? 'border-color:var(--amber);' : ''}">
+      <div style="flex:1;">
+        <div style="font-family:var(--mono); font-weight:700;">
+          ${escapeHTML(p.plate)} ${cat ? `<span class="cat-dot" style="display:inline-block;background:${cat.color}"></span>` : ''}
+          ${isToday ? '<span style="color:var(--amber); font-size:11px; margin-left:6px;">AUJOURD\'HUI</span>' : ''}
+        </div>
+        <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">
+          ${new Date(p.date).toLocaleDateString('fr-FR')}${p.time ? ' à ' + p.time : ''}${p.phone ? ' · ' + escapeHTML(p.phone) : ''}${p.note ? ' · ' + escapeHTML(p.note) : ''}
+        </div>
+      </div>
+      <button class="mini-btn" data-arrive="${p.id}" title="Marquer arrivé">✓ Arrivé</button>
+      <button class="del" data-cancel="${p.id}" title="Annuler">✕</button>
+    </div>`;
+  }).join("") || `<div class="journal-empty">Aucune pré-réservation à venir.</div>`;
+
+  let pastRows = past.map(p => `
+    <div class="journal-row">
+      <span>${new Date(p.date).toLocaleDateString('fr-FR')} — ${escapeHTML(p.plate)}</span>
+      ${prebookStatusLabel(p.status)}
+    </div>`).join("") || `<div class="journal-empty">Aucun historique.</div>`;
+
+  body.innerHTML = `
+    <h3>Pré-réservations</h3>
+    <div class="sub">Bloque à l'avance une place pour une date future, avant même l'arrivée du camion.</div>
+
+    <div class="cat-list" id="prebookList" style="margin-bottom:18px;">${rows}</div>
+
+    <button class="btn" id="showAddPrebookBtn" style="margin-bottom:18px;">➕ Nouvelle pré-réservation</button>
+
+    <div id="addPrebookForm" style="display:none; margin-bottom:22px;">
+      <div class="field"><label>Immatriculation</label><input type="text" id="pbPlate" placeholder="AB-123-CD"></div>
+      <div class="field"><label>Date prévue</label><input type="date" id="pbDate" min="${todayStr}"></div>
+      <div class="field"><label>Heure prévue (facultatif)</label><input type="time" id="pbTime"></div>
+      <div class="field"><label>Catégorie / type de règlement</label><select id="pbCategory"><option value="">Sélectionner…</option>${catOptions}</select></div>
+      <div class="field"><label>Contact (téléphone)</label><input type="text" id="pbPhone" placeholder="06 12 34 56 78"></div>
+      <div class="field"><label>Note (facultatif)</label><input type="text" id="pbNote" placeholder="Ex: camion frigo, 72h…"></div>
+      <div class="err" id="pbErr" style="display:none;">Merci de renseigner au moins la plaque et la date.</div>
+      <div class="modal-actions"><button class="btn primary" id="confirmPrebookBtn">Créer la pré-réservation</button></div>
+    </div>
+
+    <div class="sub" style="margin-top:8px;">Historique récent</div>
+    <div class="journal-list" style="max-height:160px;">${pastRows}</div>
+
+    <div class="modal-actions"><button class="btn" id="closePrebookBtn">Fermer</button></div>
+  `;
+
+  document.getElementById("closePrebookBtn").onclick = closeModal;
+  document.getElementById("showAddPrebookBtn").onclick = () => {
+    document.getElementById("addPrebookForm").style.display = "block";
+  };
+
+  document.getElementById("confirmPrebookBtn").onclick = async () => {
+    const plate = document.getElementById("pbPlate").value.trim();
+    const date = document.getElementById("pbDate").value;
+    const time = document.getElementById("pbTime").value;
+    const category = document.getElementById("pbCategory").value;
+    const phone = document.getElementById("pbPhone").value.trim();
+    const note = document.getElementById("pbNote").value.trim();
+    const errEl = document.getElementById("pbErr");
+    errEl.style.display = "none";
+    if(!plate || !date){ errEl.style.display = "block"; return; }
+    const updated = [...prebookings, {
+      id: "pb_" + Date.now(),
+      plate: plate.toUpperCase(), date, time: time || null,
+      category: category || null, phone, note,
+      status: "pending",
+      createdBy: currentUser ? currentUser.name : null,
+      createdAt: new Date().toISOString()
+    }];
+    await saveKey("prebookings", updated, "pré-réservations");
+    await renderPrebookModal();
+    updatePrebookBadge();
+  };
+
+  body.querySelectorAll("[data-cancel]").forEach(btn => {
+    btn.onclick = async () => {
+      if(!confirm("Annuler cette pré-réservation ?")) return;
+      const id = btn.dataset.cancel;
+      const updated = prebookings.map(p => p.id===id ? {...p, status:"cancelled"} : p);
+      await saveKey("prebookings", updated, "pré-réservations");
+      await renderPrebookModal();
+      updatePrebookBadge();
+    };
+  });
+
+  body.querySelectorAll("[data-arrive]").forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.arrive;
+      const pb = prebookings.find(p => p.id === id);
+      if(!pb) return;
+      const updated = prebookings.map(p => p.id===id ? {...p, status:"arrived"} : p);
+      await saveKey("prebookings", updated, "pré-réservations");
+      closeModal();
+      updatePrebookBadge();
+      // Ouvre directement une place libre pour finaliser l'entrée, plaque déjà pré-remplie
+      const freeId = orderedSlots.find(sid => spots[sid] && spots[sid].status === "free");
+      if(freeId){
+        openModal(freeId);
+        setTimeout(() => {
+          const plateInput = document.getElementById("plateInput");
+          const catInput = document.getElementById("catInput");
+          if(plateInput) plateInput.value = pb.plate;
+          if(catInput && pb.category) catInput.value = pb.category;
+        }, 0);
+      }
+    };
+  });
+}
+
+async function updatePrebookBadge(){
+  const prebookings = await loadKey("prebookings", []);
+  const todayStr = todayKey();
+  const todayCount = prebookings.filter(p => p.status === "pending" && p.date === todayStr).length;
+  const badge = document.getElementById("pbBadge");
+  if(todayCount > 0){ badge.style.display = "inline-block"; badge.textContent = todayCount; }
+  else { badge.style.display = "none"; }
+}
 /* ---------- licence / accès (vérifié côté serveur, code jamais exposé) ---------- */
 let license = { blocked:false, locked:false, paidUntil:null };
 let lastLicenseJSON = "";
